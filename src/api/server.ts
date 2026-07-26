@@ -69,6 +69,8 @@ export async function createServer(): Promise<FastifyInstance> {
     uiConfig: { docExpansion: "list", deepLinking: true },
   });
 
+  await server.register(healthRoutes);
+
   const publicDir = path.join(__dirname, "..", "..", "public");
   await server.register(fastifyStatic, {
     root: publicDir,
@@ -96,8 +98,6 @@ export async function createServer(): Promise<FastifyInstance> {
       );
     }
   });
-
-  await server.register(healthRoutes);
 
   await server.register(async (fastify) => {
     fastify.addHook("onRequest", optionalAuth);

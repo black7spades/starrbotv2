@@ -1,15 +1,15 @@
-import { execSync } from "child_process";
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 import { configStore } from "config/index";
 import { botManager } from "discord/manager";
 import { register } from "utils/metrics";
 
-let gitHash = "unknown";
-try {
-  gitHash = execSync("git rev-parse --short HEAD", { timeout: 3000 }).toString().trim();
-} catch {}
+const gitHash = process.env.GIT_HASH || (() => {
+  try {
+    return require("child_process").execSync("git rev-parse --short HEAD", { timeout: 3000 }).toString().trim();
+  } catch { return "unknown"; }
+})();
 
-let buildTime = new Date().toISOString();
+const buildTime = new Date().toISOString();
 
 export const healthRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   fastify.get("/health/live", async () => ({ status: "ok" }));
@@ -23,7 +23,7 @@ export const healthRoutes: FastifyPluginAsync = async (fastify: FastifyInstance)
     return { status: "ready", db: dbOk, redis: redisOk };
   });
 
-  fastify.get("/version", async () => ({
+  fastify.get("/api/version", async () => ({
     version: gitHash,
     buildTime,
     nodeEnv: process.env.NODE_ENV || "development",

@@ -6,6 +6,9 @@ WORKDIR /app
 # Install build dependencies
 RUN apk add --no-cache python3 make g++
 
+ARG GIT_HASH=unknown
+ENV GIT_HASH=${GIT_HASH}
+
 # Copy package files
 COPY package*.json ./
 RUN npm ci
