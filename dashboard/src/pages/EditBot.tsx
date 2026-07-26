@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 
 export default function EditBot() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: bot, isLoading } = useQuery({
     queryKey: ["bot", id],
@@ -16,16 +17,13 @@ export default function EditBot() {
   const [name, setName] = useState("");
   const [token, setToken] = useState("");
   const [clientId, setClientId] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (bot) {
       setName(bot.name || "");
-      setToken(bot.token || "");
       setClientId(bot.clientId || "");
-      setAvatarUrl(bot.avatarUrl || "");
     }
   }, [bot]);
 
@@ -36,10 +34,10 @@ export default function EditBot() {
     try {
       const data: any = {};
       if (name !== bot.name) data.name = name;
-      if (token !== bot.token) data.token = token;
+      if (token) data.token = token;
       if (clientId !== bot.clientId) data.clientId = clientId;
-      if (avatarUrl !== (bot.avatarUrl || "")) data.avatarUrl = avatarUrl || null;
       await api.updateBot(id!, data);
+      queryClient.invalidateQueries({ queryKey: ["bot", id] });
       navigate(`/bots/${id}`);
     } catch (err: any) {
       setError(err.message || "Failed to update bot");
@@ -72,19 +70,12 @@ export default function EditBot() {
 
         <div>
           <label className="block text-sm font-medium mb-1">Token</label>
-          <input value={token} onChange={e => setToken(e.target.value)} type="password" placeholder="Leave unchanged to keep current" className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent" />
-          <p className="text-xs text-discord-muted mt-1">Only fill in if you need to change the bot token</p>
+          <input value={token} onChange={e => setToken(e.target.value)} type="password" placeholder="Leave blank to keep current" className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent" />
         </div>
 
         <div>
           <label className="block text-sm font-medium mb-1">Client ID</label>
-          <input value={clientId} onChange={e => setClientId(e.target.value)} placeholder="Leave unchanged to keep current" className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent" />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Avatar URL</label>
-          <input value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)} placeholder="https://..." className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent" />
-          <p className="text-xs text-discord-muted mt-1">Optional. URL to the bot's avatar image</p>
+          <input value={clientId} onChange={e => setClientId(e.target.value)} placeholder="Leave blank to keep current" className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent" />
         </div>
 
         <div className="flex gap-2 pt-2">

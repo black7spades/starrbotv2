@@ -13,31 +13,59 @@ export default function BotDetail() {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const { selectBot } = useBotStore();
+  const [actionError, setActionError] = useState<string | null>(null);
   const activeTab = location.pathname.endsWith("/functions") ? "functions" : "overview";
 
   const { data: bot, isLoading, error } = useQuery({
     queryKey: ["bot", id],
     queryFn: () => api.getBot(id!),
     enabled: !!id,
+    refetchInterval: (query: any) => {
+      const status = query.state.data?.status;
+      if (status === "starting") return 2000;
+      return 15000;
+    },
   });
 
   useEffect(() => {
     if (bot) selectBot(bot);
   }, [bot, selectBot]);
 
+  useEffect(() => {
+    if (actionError) {
+      const t = setTimeout(() => setActionError(null), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [actionError]);
+
   const startMutation = useMutation({
     mutationFn: () => api.startBot(id!),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["bot", id] }),
+    onSuccess: () => {
+      setActionError(null);
+      queryClient.invalidateQueries({ queryKey: ["bot", id] });
+      queryClient.invalidateQueries({ queryKey: ["bots"] });
+    },
+    onError: (err: any) => setActionError(err.message || "Failed to start bot"),
   });
 
   const stopMutation = useMutation({
     mutationFn: () => api.stopBot(id!),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["bot", id] }),
+    onSuccess: () => {
+      setActionError(null);
+      queryClient.invalidateQueries({ queryKey: ["bot", id] });
+      queryClient.invalidateQueries({ queryKey: ["bots"] });
+    },
+    onError: (err: any) => setActionError(err.message || "Failed to stop bot"),
   });
 
   const restartMutation = useMutation({
     mutationFn: () => api.restartBot(id!),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["bot", id] }),
+    onSuccess: () => {
+      setActionError(null);
+      queryClient.invalidateQueries({ queryKey: ["bot", id] });
+      queryClient.invalidateQueries({ queryKey: ["bots"] });
+    },
+    onError: (err: any) => setActionError(err.message || "Failed to restart bot"),
   });
 
   const deleteMutation = useMutation({
@@ -46,6 +74,7 @@ export default function BotDetail() {
       queryClient.invalidateQueries({ queryKey: ["bots"] });
       navigate("/");
     },
+    onError: (err: any) => setActionError(err.message || "Failed to delete bot"),
   });
 
   if (isLoading) return <div className="flex items-center justify-center h-64">Loading...</div>;
@@ -56,6 +85,13 @@ export default function BotDetail() {
 
   return (
     <div className="space-y-6">
+      {actionError && (
+        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm flex items-center justify-between">
+          <span>{actionError}</span>
+          <button onClick={() => setActionError(null)} className="text-red-400 hover:text-red-300">×</button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -95,14 +131,14 @@ export default function BotDetail() {
                   disabled={stopMutation.isPending}
                   className="btn-secondary text-sm"
                 >
-                  Stop
+                  {stopMutation.isPending ? "Stopping..." : "Stop"}
                 </button>
                 <button
                   onClick={() => restartMutation.mutate()}
                   disabled={restartMutation.isPending}
                   className="btn-secondary text-sm"
                 >
-                  Restart
+                  {restartMutation.isPending ? "Restarting..." : "Restart"}
                 </button>
               </>
             )}
@@ -113,7 +149,7 @@ export default function BotDetail() {
                 disabled={startMutation.isPending}
                 className="btn-primary text-sm"
               >
-                {bot.status === "error" ? "Restart" : "Start"}
+                {startMutation.isPending ? "Starting..." : bot.status === "error" ? "Restart" : "Start"}
               </button>
             )}
 
@@ -133,7 +169,7 @@ export default function BotDetail() {
               disabled={deleteMutation.isPending}
               className="btn-danger text-sm"
             >
-              Delete
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
             </button>
           </div>
         )}

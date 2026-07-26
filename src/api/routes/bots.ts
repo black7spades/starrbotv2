@@ -6,18 +6,23 @@ import { requireAdmin, optionalAuth } from "auth/middleware";
 import { botManager } from "discord/manager";
 import { validateBotToken } from "discord/validation";
 
+function maskToken(token: string): string {
+  if (!token || token.length < 8) return "••••••••";
+  return token.slice(0, 4) + "••••" + token.slice(-4);
+}
+
 export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   fastify.get("/", { preHandler: optionalAuth }, async () => {
-    const bots = configStore.getBotSummaries();
     const summaries = botManager.getAllBotSummaries();
-    const statusMap: Record<string, { status: string; error: string | null; guildCount: number }> = {};
-    for (const s of summaries) {
-      statusMap[s.id] = { status: s.status, error: s.error, guildCount: s.guildCount };
-    }
-    const enriched = bots.map((b) => ({
-      ...b,
-      ...(statusMap[b.id] || { status: "stopped", error: null, guildCount: 0 }),
-    }));
+    const enriched = summaries.map((s) => {
+      const managed = botManager.getBot(s.id);
+      const avatar = managed?.client?.user?.displayAvatarURL() || s.avatarUrl || null;
+      return {
+        ...s,
+        token: undefined,
+        avatarUrl: avatar,
+      };
+    });
     return { bots: enriched };
   });
 
@@ -33,9 +38,15 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
       const functions = configStore.getBotFunctions(bot.id);
       const managed = botManager.getBot(bot.id);
       const liveStats = managed?.getStats();
+      const avatar = managed?.client?.user?.displayAvatarURL() || bot.avatarUrl || null;
 
       return {
-        ...bot,
+        id: bot.id,
+        name: bot.name,
+        clientId: bot.clientId,
+        avatarUrl: avatar,
+        enabled: bot.enabled,
+        createdAt: bot.createdAt,
         status: managed?.status || "stopped",
         error: managed?.error || null,
         guildCount: managed?.guildCount || 0,
@@ -70,7 +81,7 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
             name: { type: "string", minLength: 1, maxLength: 64 },
             token: { type: "string", minLength: 50 },
             clientId: { type: "string", minLength: 10 },
-            avatarUrl: { type: "string", format: "uri", nullable: true },
+            avatarUrl: { type: "string", nullable: true },
           },
           required: ["name", "token", "clientId"],
         },
@@ -78,8 +89,12 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
     },
     async (request, reply) => {
       try {
+        const valid = await validateBotToken(request.body.token, request.body.clientId);
+        if (!valid) {
+          return reply.code(400).send({ error: "Bad Request", message: "Invalid bot token or client ID" });
+        }
         const bot = configStore.createBot(request.body);
-        return reply.code(201).send(bot);
+        return reply.code(201).send({ ...bot, token: maskToken(bot.token) });
       } catch (error: any) {
         if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
           return reply.code(409).send({ error: "Conflict", message: "Bot with this name already exists" });
@@ -100,7 +115,7 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
             name: { type: "string", minLength: 1, maxLength: 64 },
             token: { type: "string", minLength: 50 },
             clientId: { type: "string", minLength: 10 },
-            avatarUrl: { type: "string", format: "uri", nullable: true },
+            avatarUrl: { type: "string", nullable: true },
             enabled: { type: "boolean" },
           },
         },
@@ -124,8 +139,15 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
       const updated = configStore.updateBot(request.params.id, request.body);
       if (!updated) {
         return reply.code(404).send({ error: "Not Found", message: "Bot not found" });
+
       }
-      return reply.send(updated);
+
+      const managed = botManager.getBot(request.params.id);
+      if (managed && managed.status === "running") {
+        await botManager.restartBot(updated);
+      }
+
+      return { ...updated, token: maskToken(updated.token) };
     }
   );
 
@@ -133,10 +155,18 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
     "/:id",
     { preHandler: requireAdmin },
     async (request, reply) => {
-      const deleted = configStore.deleteBot(request.params.id);
-      if (!deleted) {
+      const bot = configStore.getBot(request.params.id);
+      if (!bot) {
         return reply.code(404).send({ error: "Not Found", message: "Bot not found" });
       }
+
+      try {
+        await botManager.stopBot(request.params.id);
+      } catch {
+        // ignore — bot may not be running
+      }
+
+      configStore.deleteBot(request.params.id);
       return reply.code(204).send();
     }
   );
@@ -200,8 +230,12 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
         return reply.code(404).send({ error: "Not Found", message: "Bot not found" });
       }
 
-      botManager.stopBot(bot.id);
-      return { ok: true };
+      try {
+        await botManager.stopBot(bot.id);
+        return { ok: true };
+      } catch (error: any) {
+        return reply.code(500).send({ error: "Internal Server Error", message: error.message });
+      }
     }
   );
 
