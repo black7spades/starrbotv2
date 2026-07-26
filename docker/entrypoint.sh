@@ -3,6 +3,9 @@
 
 set -e
 
+# Fix data directory ownership for the nodejs user
+chown -R nodejs:nodejs /app/data
+
 # Generate secrets if not provided
 if [ -z "$JWT_SECRET" ]; then
     export JWT_SECRET=$(openssl rand -hex 32)
@@ -19,5 +22,5 @@ if [ -z "$COOKIE_SECRET" ]; then
     echo "Generated COOKIE_SECRET"
 fi
 
-# Execute the main command
-exec "$@"
+# Drop privileges and execute the main command
+exec su-exec nodejs "$@"

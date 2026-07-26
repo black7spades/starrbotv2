@@ -49,10 +49,11 @@ COPY --from=builder --chown=nodejs:nodejs /app/public ./public
 COPY --chown=nodejs:nodejs docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Create data directory
-RUN mkdir -p /app/data && chown -R nodejs:nodejs /app/data
+# Install su-exec for privilege dropping
+RUN apk add --no-cache su-exec
 
-USER nodejs
+# Create data directory
+RUN mkdir -p /app/data
 
 EXPOSE 2013
 
