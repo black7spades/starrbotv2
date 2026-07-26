@@ -27,6 +27,7 @@ export default function Layout() {
   const navItems = [
     { path: "/", label: "Dashboard", icon: "📊" },
     { path: "/functions", label: "Functions", icon: "⚡" },
+    { path: "/logs", label: "Logs", icon: "📝" },
   ];
 
   const statusColor = (status: string) => {

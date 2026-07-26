@@ -60,7 +60,6 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
               functions: liveStats.functions,
             }
           : null,
-        logs: managed?.getLogs() || [],
         functions: functions.map((f) => ({
           functionName: f.functionName,
           config: f.config,

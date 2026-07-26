@@ -33,12 +33,6 @@ export interface BotStats {
   functions: string[];
 }
 
-export interface LogEntry {
-  message: string;
-  timestamp: number;
-  level: "info" | "warn" | "error";
-}
-
 export interface ManagedBot extends EventEmitter {
   config: any;
   client: any;
@@ -47,13 +41,10 @@ export interface ManagedBot extends EventEmitter {
   functions: Map<string, FunctionInstance>;
   startTime: number | null;
   stats: BotStats;
-  logs: LogEntry[];
   start(): Promise<void>;
   stop(): Promise<void>;
   reloadFunction(name: string): Promise<void>;
   getStats(): BotStats;
-  getLogs(): LogEntry[];
   get guildCount(): number;
   get guilds(): { id: string; name: string; memberCount: number; icon: string | null }[];
-  addLog(message: string, level: LogEntry["level"]): void;
 }

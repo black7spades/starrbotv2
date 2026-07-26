@@ -10,7 +10,6 @@ interface BotTabsProps {
 const tabs = [
   { id: "overview", label: "Overview", icon: "📊" },
   { id: "functions", label: "Functions", icon: "🔧" },
-  { id: "logs", label: "Logs", icon: "📝" },
 ];
 
 export function BotTabs({ activeTab, bot }: BotTabsProps) {
@@ -37,7 +36,6 @@ export function BotTabs({ activeTab, bot }: BotTabsProps) {
 
       {activeTab === "overview" && <OverviewTab bot={bot} />}
       {activeTab === "functions" && <FunctionsTab bot={bot} />}
-      {activeTab === "logs" && <LogsTab bot={bot} />}
     </div>
   );
 }
@@ -91,7 +89,7 @@ function FunctionsTab({ bot }: { bot: any }) {
   if (manifests.length === 0 && (!bot.functions || bot.functions.length === 0)) {
     return (
       <div className="text-center py-12 text-discord-muted">
-        <p className="text-xl mb-2">🔧 No functions available</p>
+        <p className="text-xl mb-2">No functions available</p>
         <p className="text-sm">No function packages are installed on this server.</p>
       </div>
     );
@@ -141,46 +139,6 @@ function FunctionsTab({ bot }: { bot: any }) {
             </button>
           );
         })}
-      </div>
-    </div>
-  );
-}
-
-function LogsTab({ bot }: { bot: any }) {
-  const logs: any[] = bot.logs || [];
-
-  if (logs.length === 0) {
-    return (
-      <div className="h-96 bg-discord-input rounded-xl overflow-hidden flex items-center justify-center text-discord-muted">
-        <div className="text-center">
-          <p className="text-lg mb-1">No logs yet</p>
-          <p className="text-sm">Logs will appear here when the bot is running.</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-discord-input rounded-xl overflow-hidden font-mono text-sm">
-      <div className="p-3 border-b border-discord-border flex items-center justify-between">
-        <span className="text-discord-muted text-xs">Last {logs.length} entries</span>
-      </div>
-      <div className="h-96 overflow-y-auto p-3 space-y-1">
-        {logs.slice().reverse().map((log: any, i: number) => (
-          <div key={i} className={`flex gap-2 text-xs leading-relaxed ${
-            log.level === "error" ? "text-red-400" :
-            log.level === "warn" ? "text-yellow-400" :
-            "text-discord-muted"
-          }`}>
-            <span className="shrink-0 text-discord-muted">{new Date(log.timestamp).toLocaleTimeString()}</span>
-            <span className={`shrink-0 w-12 text-right ${
-              log.level === "error" ? "text-red-400" :
-              log.level === "warn" ? "text-yellow-400" :
-              "text-green-400"
-            }`}>{log.level}</span>
-            <span className="break-all">{log.message}</span>
-          </div>
-        ))}
       </div>
     </div>
   );

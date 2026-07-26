@@ -2,7 +2,7 @@ import { Client, GatewayIntentBits, Events, REST, Routes, EmbedBuilder, ActionRo
 import { EventEmitter } from "events";
 import { configStore } from "config/index";
 import { functionRegistry } from "functions/registry/index";
-import { logger } from "utils/logger";
+import { systemLog } from "utils/systemLog";
 import type { Bot } from "config/schema";
 import type { FunctionInstance } from "./types";
 
@@ -15,12 +15,6 @@ export interface BotStats {
   functions: string[];
 }
 
-export interface LogEntry {
-  message: string;
-  timestamp: number;
-  level: "info" | "warn" | "error";
-}
-
 export interface ManagedBot extends EventEmitter {
   config: Bot;
   client: Client;
@@ -29,18 +23,13 @@ export interface ManagedBot extends EventEmitter {
   functions: Map<string, FunctionInstance>;
   startTime: number | null;
   stats: BotStats;
-  logs: LogEntry[];
   start(): Promise<void>;
   stop(): Promise<void>;
   reloadFunction(name: string): Promise<void>;
   getStats(): BotStats;
-  getLogs(): LogEntry[];
   get guildCount(): number;
   get guilds(): { id: string; name: string; memberCount: number; icon: string | null }[];
-  addLog(message: string, level: LogEntry["level"]): void;
 }
-
-const MAX_LOGS = 100;
 
 function createBotInstance(botConfig: Bot): ManagedBot {
   const emitter = new EventEmitter();
@@ -53,7 +42,6 @@ function createBotInstance(botConfig: Bot): ManagedBot {
   });
 
   const functions = new Map<string, FunctionInstance>();
-  const logs: LogEntry[] = [];
   let status: ManagedBot["status"] = "stopped";
   let error: string | null = null;
   let startTime: number | null = null;
@@ -67,11 +55,11 @@ function createBotInstance(botConfig: Bot): ManagedBot {
     functions: [],
   };
 
-  function addLog(message: string, level: LogEntry["level"] = "info"): void {
-    const entry: LogEntry = { message, timestamp: Date.now(), level };
-    logs.push(entry);
-    if (logs.length > MAX_LOGS) logs.shift();
-    emitter.emit("log", entry);
+  const botSource = `bot:${botConfig.id}`;
+
+  function log(level: "info" | "warn" | "error", message: string, context?: Record<string, unknown>) {
+    systemLog.add(level, message, botSource, { botName: botConfig.name, ...context });
+    emitter.emit("log", { message, timestamp: Date.now(), level });
   }
 
   function setStatus(newStatus: ManagedBot["status"], newError: string | null = null): void {
@@ -102,19 +90,19 @@ function createBotInstance(botConfig: Bot): ManagedBot {
     try {
       if (guildId) {
         await rest.put(Routes.applicationGuildCommands(botConfig.clientId, guildId), { body: commands });
-        addLog(`Registered ${commands.length} slash commands (guild ${guildId})`);
+        log("info", `Registered ${commands.length} slash commands (guild ${guildId})`);
       } else {
         await rest.put(Routes.applicationCommands(botConfig.clientId), { body: commands });
-        addLog(`Registered ${commands.length} slash commands (global — may take up to 1 hour to propagate)`);
+        log("info", `Registered ${commands.length} slash commands (global — may take up to 1 hour to propagate)`);
       }
     } catch (err: any) {
-      addLog(`Failed to register commands: ${err.message}`, "error");
+      log("error", `Failed to register commands: ${err.message}`);
     }
   }
 
   function setupEventHandlers(): void {
     client.once(Events.ClientReady, async (c) => {
-      addLog(`Logged in as ${c.user.tag}`);
+      log("info", `Logged in as ${c.user.tag}`);
       setStatus("running");
       startTime = Date.now();
       stats.uptime = Date.now();
@@ -219,7 +207,7 @@ function createBotInstance(botConfig: Bot): ManagedBot {
                 await instance.handleCommand(interaction, emitter as ManagedBot, { bot: emitter, client, config: botConfig });
               }
             } catch (err: any) {
-              addLog(`Command error (${commandName}): ${err.message}`, "error");
+              log("error", `Command error (${commandName}): ${err.message}`);
               stats.errors++;
               if (!interaction.replied && !interaction.deferred) {
                 await interaction.reply({ content: "Error executing command", ephemeral: true }).catch(() => {});
@@ -238,19 +226,19 @@ function createBotInstance(botConfig: Bot): ManagedBot {
           try {
             await instance.onMessage(message, emitter as ManagedBot, { bot: emitter, client, config: botConfig });
           } catch (err: any) {
-            addLog(`Message handler error: ${err.message}`, "error");
+            log("error", `Message handler error: ${err.message}`);
           }
         }
       }
     });
 
     client.on(Events.Error, (err) => {
-      addLog(`Client error: ${err.message}`, "error");
+      log("error", `Client error: ${err.message}`);
       stats.errors++;
     });
 
     client.on(Events.Warn, (warn) => {
-      addLog(`Discord warning: ${warn}`, "warn");
+      log("warn", `Discord warning: ${warn}`);
     });
   }
 
@@ -262,12 +250,11 @@ function createBotInstance(botConfig: Bot): ManagedBot {
     functions,
     get startTime() { return startTime; },
     stats,
-    logs,
 
     async start() {
       if (status !== "stopped") return;
       setStatus("starting");
-      addLog("Starting bot...");
+      log("info", "Starting bot...");
 
       const botFunctions = configStore.getBotFunctions(botConfig.id);
       for (const bf of botFunctions) {
@@ -279,9 +266,9 @@ function createBotInstance(botConfig: Bot): ManagedBot {
               instance.manifest = manifest;
               functions.set(bf.functionName, instance);
               await instance.onLoad?.(emitter as ManagedBot, bf.config);
-              addLog(`Loaded function: ${bf.functionName}`);
+              log("info", `Loaded function: ${bf.functionName}`);
             } catch (err: any) {
-              addLog(`Failed to load function ${bf.functionName}: ${err.message}`, "error");
+              log("error", `Failed to load function ${bf.functionName}: ${err.message}`);
             }
           }
         }
@@ -294,20 +281,20 @@ function createBotInstance(botConfig: Bot): ManagedBot {
         await client.login(botConfig.token);
       } catch (err: any) {
         setStatus("error", err.message);
-        addLog(`Login failed: ${err.message}`, "error");
+        log("error", `Login failed: ${err.message}`);
         throw err;
       }
     },
 
     async stop() {
       if (status === "stopped") return;
-      addLog("Stopping bot...");
+      log("info", "Stopping bot...");
 
       for (const [name, instance] of functions) {
         try {
           await instance.onUnload?.();
         } catch (err: any) {
-          addLog(`Error stopping function ${name}: ${err.message}`, "error");
+          log("error", `Error stopping function ${name}: ${err.message}`);
         }
       }
       functions.clear();
@@ -327,7 +314,7 @@ function createBotInstance(botConfig: Bot): ManagedBot {
         try {
           await oldInstance.onUnload?.();
         } catch (err: any) {
-          addLog(`Error stopping function ${name}: ${err.message}`, "error");
+          log("error", `Error stopping function ${name}: ${err.message}`);
         }
         functions.delete(name);
       }
@@ -340,9 +327,9 @@ function createBotInstance(botConfig: Bot): ManagedBot {
             instance.manifest = manifest;
             functions.set(name, instance);
             await instance.onLoad?.(emitter as ManagedBot, bf.config);
-            addLog(`Reloaded function: ${name}`);
+            log("info", `Reloaded function: ${name}`);
           } catch (err: any) {
-            addLog(`Failed to reload function ${name}: ${err.message}`, "error");
+            log("error", `Failed to reload function ${name}: ${err.message}`);
           }
         }
       }
@@ -358,10 +345,6 @@ function createBotInstance(botConfig: Bot): ManagedBot {
       };
     },
 
-    getLogs() {
-      return [...logs];
-    },
-
     get guildCount() {
       return client.guilds.cache.size;
     },
@@ -374,8 +357,6 @@ function createBotInstance(botConfig: Bot): ManagedBot {
         icon: g.iconURL(),
       }));
     },
-
-    addLog,
   } as ManagedBot;
 
   Object.setPrototypeOf(result, Object.getPrototypeOf(emitter));
@@ -416,10 +397,6 @@ class BotManagerClass extends EventEmitter {
 
     bot.on("statusChange", ({ status, error }) => {
       this.emit("bot:status", { id: config.id, status, error });
-    });
-
-    bot.on("log", (log: LogEntry) => {
-      this.emit("bot:log", { botId: config.id, ...log });
     });
 
     try {

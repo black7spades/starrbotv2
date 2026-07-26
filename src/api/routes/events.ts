@@ -1,7 +1,6 @@
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
-import { configStore } from "config/index";
 import { botManager } from "discord/manager";
-import { logger } from "utils/logger";
+import { systemLog, LogEntry } from "utils/systemLog";
 import { optionalAuth } from "auth/middleware";
 
 export const eventRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
@@ -20,18 +19,12 @@ export const eventRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) 
 
     const handlers = {
       botStatus: (data: { id: string; status: string; error: string | null }) => send("bot:status", data),
-      botLog: (data: { botId: string; message: string; timestamp: number; level: string }) => send("bot:log", data),
-      botStats: (data: { id: string; stats: any }) => send("bot:stats", data),
     };
 
     botManager.on("bot:status", handlers.botStatus);
-    botManager.on("bot:log", handlers.botLog);
-    botManager.on("bot:stats", handlers.botStats);
 
     request.raw.on("close", () => {
       botManager.off("bot:status", handlers.botStatus);
-      botManager.off("bot:log", handlers.botLog);
-      botManager.off("bot:stats", handlers.botStats);
     });
 
     const interval = setInterval(() => {
@@ -41,36 +34,38 @@ export const eventRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) 
     request.raw.on("close", () => clearInterval(interval));
   });
 
-  fastify.get<{ Params: { id: string } }>(
-    "/bots/:id/logs",
-    { preHandler: optionalAuth },
-    async (request, reply) => {
-      const runtime = botManager.getBot(request.params.id);
-      if (!runtime) {
-        return reply.code(404).send({ error: "Not Found", message: "Bot not found" });
-      }
+  fastify.get("/logs", { preHandler: optionalAuth }, async (request) => {
+    const query = request.query as any;
+    return systemLog.getAll({
+      limit: Math.min(parseInt(query.limit) || 500, 2000),
+      level: query.level || undefined,
+      source: query.source || undefined,
+      since: query.since ? parseInt(query.since) : undefined,
+    });
+  });
 
-      reply.raw.setHeader("Content-Type", "text/event-stream");
-      reply.raw.setHeader("Cache-Control", "no-cache");
-      reply.raw.setHeader("Connection", "keep-alive");
-      reply.raw.flushHeaders();
+  fastify.get("/logs/stream", { preHandler: optionalAuth }, async (request, reply) => {
+    reply.raw.setHeader("Content-Type", "text/event-stream");
+    reply.raw.setHeader("Cache-Control", "no-cache");
+    reply.raw.setHeader("Connection", "keep-alive");
+    reply.raw.flushHeaders();
 
-      const logs = runtime.getLogs();
-      for (const log of logs.slice(-100)) {
-        reply.raw.write(`data: ${JSON.stringify(log)}\n\n`);
-      }
+    const send = (entry: LogEntry) => {
+      reply.raw.write(`data: ${JSON.stringify(entry)}\n\n`);
+    };
 
-      const handler = (data: { botId: string; message: string; timestamp: number; level: string }) => {
-        if (data.botId === request.params.id) {
-          reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
-        }
-      };
-
-      botManager.on("bot:log", handler);
-
-      request.raw.on("close", () => {
-        botManager.off("bot:log", handler);
-      });
+    // Send recent history
+    const recent = systemLog.getRecent(100);
+    for (const entry of recent) {
+      send(entry);
     }
-  );
+
+    // Listen for new logs
+    const handler = (entry: LogEntry) => send(entry);
+    systemLog.on("log", handler);
+
+    request.raw.on("close", () => {
+      systemLog.off("log", handler);
+    });
+  });
 };
