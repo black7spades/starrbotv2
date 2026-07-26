@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Events, REST, Routes, EmbedBuilder } from "discord.js";
+import { Client, GatewayIntentBits, Events, REST, Routes, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } from "discord.js";
 import { EventEmitter } from "events";
 import { configStore } from "config/index";
 import { functionRegistry } from "functions/registry/index";
@@ -123,47 +123,110 @@ function createBotInstance(botConfig: Bot): ManagedBot {
     });
 
     client.on(Events.InteractionCreate, async (interaction) => {
-      if (!interaction.isChatInputCommand()) return;
+      if (interaction.isChatInputCommand()) {
+        if (interaction.commandName === "help") {
+          const activeFunctions = Array.from(functions.entries()).filter(
+            ([, inst]) => inst.manifest?.commands?.length > 0,
+          );
 
-      if (interaction.commandName === "help") {
-        const embed = new EmbedBuilder()
-          .setTitle("Available Commands")
-          .setColor(0x5865f2)
-          .setTimestamp();
-
-        let hasCommands = false;
-        for (const [name, instance] of functions) {
-          const cmds = instance.manifest?.commands || [];
-          if (cmds.length === 0) continue;
-          hasCommands = true;
-          const cmdList = cmds.map((c: any) => `\`/${c.name}\` — ${c.description || "No description"}`).join("\n");
-          const label = instance.manifest?.label || name;
-          embed.addFields({ name: `${instance.manifest?.icon || "🔧"} ${label}`, value: cmdList });
-        }
-
-        if (!hasCommands) {
-          embed.setDescription("No commands enabled. Enable functions in the dashboard first.");
-        }
-
-        await interaction.reply({ embeds: [embed], ephemeral: true });
-        return;
-      }
-
-      const commandName = interaction.commandName;
-      for (const [name, instance] of functions) {
-        if (instance.manifest?.commands?.some((cmd: any) => cmd.name === commandName)) {
-          try {
-            if (instance.handleCommand) {
-              await instance.handleCommand(interaction, emitter as ManagedBot, { bot: emitter, client, config: botConfig });
-            }
-          } catch (err: any) {
-            addLog(`Command error (${commandName}): ${err.message}`, "error");
-            stats.errors++;
-            if (!interaction.replied && !interaction.deferred) {
-              await interaction.reply({ content: "Error executing command", ephemeral: true }).catch(() => {});
-            }
+          if (activeFunctions.length === 0) {
+            await interaction.reply({
+              content: "No commands enabled. Enable functions in the dashboard first.",
+              ephemeral: true,
+            });
+            return;
           }
+
+          const buildAllEmbed = () => {
+            const embed = new EmbedBuilder()
+              .setTitle("Available Commands")
+              .setDescription("Select a function from the dropdown to filter commands.")
+              .setColor(0x5865f2)
+              .setTimestamp();
+
+            for (const [name, instance] of activeFunctions) {
+              const cmds = instance.manifest!.commands!;
+              const cmdList = cmds.map((c: any) => `\`/${c.name}\` — ${c.description || "No description"}`).join("\n");
+              embed.addFields({
+                name: `${instance.manifest?.icon || "🔧"} ${instance.manifest?.label || name}`,
+                value: cmdList,
+              });
+            }
+            return embed;
+          };
+
+          const buildFunctionEmbed = (fnName: string) => {
+            const instance = functions.get(fnName);
+            if (!instance) return buildAllEmbed();
+            const cmds = instance.manifest?.commands || [];
+            const embed = new EmbedBuilder()
+              .setTitle(`${instance.manifest?.icon || "🔧"} ${instance.manifest?.label || fnName}`)
+              .setColor(0x5865f2)
+              .setTimestamp();
+
+            if (cmds.length > 0) {
+              embed.setDescription(
+                cmds.map((c: any) => `\`/${c.name}\` — ${c.description || "No description"}`).join("\n"),
+              );
+            } else {
+              embed.setDescription("No commands in this function.");
+            }
+            return embed;
+          };
+
+          const selectMenu = new StringSelectMenuBuilder()
+            .setCustomId("help:function-select")
+            .setPlaceholder("Filter by function...")
+            .addOptions(
+              activeFunctions.map(([name, instance]) => ({
+                label: instance.manifest?.label || name,
+                value: name,
+                emoji: instance.manifest?.icon || "🔧",
+              })),
+            );
+
+          const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
+
+          const reply = await interaction.reply({
+            embeds: [buildAllEmbed()],
+            components: [row],
+            ephemeral: true,
+          });
+
+          const collector = reply.createMessageComponentCollector({
+            filter: (i: any) => i.user.id === interaction.user.id,
+            time: 300000,
+          });
+
+          collector.on("collect", async (i: any) => {
+            if (!i.isStringSelectMenu()) return;
+            const selected = i.values[0];
+            if (selected === "all") {
+              await i.update({ embeds: [buildAllEmbed()] });
+            } else {
+              await i.update({ embeds: [buildFunctionEmbed(selected)] });
+            }
+          });
+
           return;
+        }
+
+        const commandName = interaction.commandName;
+        for (const [name, instance] of functions) {
+          if (instance.manifest?.commands?.some((cmd: any) => cmd.name === commandName)) {
+            try {
+              if (instance.handleCommand) {
+                await instance.handleCommand(interaction, emitter as ManagedBot, { bot: emitter, client, config: botConfig });
+              }
+            } catch (err: any) {
+              addLog(`Command error (${commandName}): ${err.message}`, "error");
+              stats.errors++;
+              if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({ content: "Error executing command", ephemeral: true }).catch(() => {});
+              }
+            }
+            return;
+          }
         }
       }
     });
