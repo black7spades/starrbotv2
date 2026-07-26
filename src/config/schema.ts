@@ -152,3 +152,14 @@ export const LogEntrySchema = z.object({
   level: z.enum(["info", "warn", "error"]).default("info"),
 });
 export type LogEntry = z.infer<typeof LogEntrySchema>;
+
+export const TicketLogSchema = z.object({
+  ticketId: z.string(),
+  threadName: z.string(),
+  threadId: z.string(),
+  submitterId: z.string(),
+  closedBy: z.string(),
+  rating: z.number().int().min(0).max(5),
+  closedAt: z.number().int().positive(),
+});
+export type TicketLog = z.infer<typeof TicketLogSchema>;

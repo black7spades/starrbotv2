@@ -89,10 +89,12 @@ export async function createServer(): Promise<FastifyInstance> {
 
   server.addHook("onResponse", async (request: FastifyRequest, reply) => {
     const duration = Date.now() - (request.startTime || Date.now());
-    logger.info(
-      { method: request.method, url: request.url, status: reply.statusCode, duration },
-      "HTTP request"
-    );
+    if (reply.statusCode >= 400 || duration > 2000) {
+      logger.warn(
+        { method: request.method, url: request.url, status: reply.statusCode, duration },
+        "HTTP request"
+      );
+    }
   });
 
   await server.register(healthRoutes);

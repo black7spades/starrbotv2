@@ -3,10 +3,9 @@ import {
   SlashCommandBuilder,
   ChannelType,
   EmbedBuilder,
-  ActionRowBuilder,
-  StringSelectMenuBuilder,
   PermissionFlagsBits,
 } from "discord.js";
+import { configStore } from "config/store";
 
 let ticketCounter = 0;
 
@@ -58,7 +57,7 @@ const ticketsManifest: FunctionManifest = {
           "1️⃣ — Unsatisfied\n" +
           "2️⃣ — Not happy\n" +
           "3️⃣ — Okay\n" +
-          "4️⃣ — Satisfied\n" +
+           "4️⃣ — Satisfied\n" +
           "5️⃣ — Overjoyed",
         )
         .setColor(0xfee75c)
@@ -89,11 +88,36 @@ const ticketsManifest: FunctionManifest = {
           ],
         });
 
+        const ticketIdMatch = thread.name.match(/^(TICKET-\d+)/);
+        const ticketId = ticketIdMatch ? ticketIdMatch[1] : thread.name;
+
+        configStore.logTicket({
+          ticketId,
+          threadName: thread.name,
+          threadId: thread.id,
+          submitterId,
+          closedBy: closerId,
+          rating,
+        });
+
+        collector.stop();
         await thread.setArchived(true, `Rated ${rating}/5 by submitter`);
       });
 
       collector.on("end", async (collected: any) => {
         if (collected.size === 0) {
+          const ticketIdMatch = thread.name.match(/^(TICKET-\d+)/);
+          const ticketId = ticketIdMatch ? ticketIdMatch[1] : thread.name;
+
+          configStore.logTicket({
+            ticketId,
+            threadName: thread.name,
+            threadId: thread.id,
+            submitterId,
+            closedBy: closerId,
+            rating: 0,
+          });
+
           await thread.send({
             embeds: [
               new EmbedBuilder()

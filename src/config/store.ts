@@ -13,6 +13,7 @@ import {
   GlobalSettings,
   RefreshToken,
   BotSummary,
+  TicketLog,
 } from "./schema";
 
 const DATA_DIR = join(__dirname, "../../data");
@@ -23,6 +24,7 @@ const BOT_FUNCTIONS_FILE = join(DATA_DIR, "bot-functions.json");
 const SETTINGS_FILE = join(DATA_DIR, "settings.json");
 const REFRESH_TOKENS_FILE = join(DATA_DIR, "refresh-tokens.json");
 const POSTED_URLS_FILE = join(DATA_DIR, "posted-urls.json");
+const TICKETS_LOG_FILE = join(DATA_DIR, "tickets-log.json");
 
 function ensureDataDir(): void {
   if (!existsSync(DATA_DIR)) {
@@ -272,6 +274,20 @@ export class ConfigStore {
       return all[botId].length;
     }
     return 0;
+  }
+
+  // Ticket logs
+  logTicket(entry: Omit<TicketLog, "closedAt">): TicketLog {
+    const tickets = readJson<TicketLog[]>(TICKETS_LOG_FILE, []);
+    const record: TicketLog = { ...entry, closedAt: Date.now() };
+    tickets.push(record);
+    writeJson(TICKETS_LOG_FILE, tickets);
+    return record;
+  }
+
+  getTicketLogs(limit: number = 100): TicketLog[] {
+    const tickets = readJson<TicketLog[]>(TICKETS_LOG_FILE, []);
+    return tickets.slice(-limit);
   }
 
   getBotSummaries(): BotSummary[] {
