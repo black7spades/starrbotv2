@@ -4,6 +4,8 @@ import cookie from "@fastify/cookie";
 import rateLimit from "@fastify/rate-limit";
 import swagger from "@fastify/swagger";
 import swaggerUI from "@fastify/swagger-ui";
+import fastifyStatic from "@fastify/static";
+import path from "path";
 import { configStore } from "config/index";
 import { authRoutes } from "./routes/auth";
 import { userRoutes } from "./routes/users";
@@ -68,6 +70,20 @@ export async function createServer(): Promise<FastifyInstance> {
     uiConfig: { docExpansion: "list", deepLinking: true },
   });
 
+  const publicDir = path.join(__dirname, "..", "..", "public");
+  await server.register(fastifyStatic, {
+    root: publicDir,
+    prefix: "/",
+    wildcard: false,
+  });
+
+  server.setNotFoundHandler((request, reply) => {
+    if (request.url.startsWith("/api/") || request.url.startsWith("/docs")) {
+      return reply.code(404).send({ error: "Not Found", message: `Route ${request.method} ${request.url} not found` });
+    }
+    return reply.sendFile("index.html");
+  });
+
   server.addHook("onRequest", async (request: FastifyRequest) => {
     request.startTime = Date.now();
   });
@@ -113,10 +129,6 @@ export async function createServer(): Promise<FastifyInstance> {
     }
 
     return reply.code(500).send({ error: "Internal Server Error", message: "An unexpected error occurred" });
-  });
-
-  server.setNotFoundHandler((request, reply) => {
-    reply.code(404).send({ error: "Not Found", message: `Route ${request.method} ${request.url} not found` });
   });
 
   return server;

@@ -1,7 +1,12 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { JWTPayload } from "../../src/config/schema.js";
-import { authApi } from "./api/auth";
+import { api } from "../api/client";
+
+interface JWTPayload {
+  id: string;
+  username: string;
+  role: "admin" | "viewer";
+}
 
 interface AuthState {
   user: JWTPayload | null;
@@ -19,7 +24,7 @@ export const useAuthStore = create<AuthState>()(
 
       initAuth: async () => {
         try {
-          const res = await authApi.me();
+          const res = await api.getMe();
           set({ user: res.user, loading: false });
         } catch {
           set({ user: null, loading: false });
@@ -27,12 +32,12 @@ export const useAuthStore = create<AuthState>()(
       },
 
       login: async (username: string, password: string) => {
-        const res = await authApi.login(username, password);
+        const res = await api.login(username, password);
         set({ user: res.user, loading: false });
       },
 
       logout: async () => {
-        await authApi.logout();
+        await api.logout();
         set({ user: null });
       },
     }),
