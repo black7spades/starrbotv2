@@ -67,6 +67,11 @@ export class ConfigStore {
     return users.map(({ passwordHash, ...u }) => u);
   }
 
+  hasAdminUser(): boolean {
+    const users = readJson<User[]>(USERS_FILE, []);
+    return users.some((u) => u.role === "admin");
+  }
+
   getUserByUsername(username: string): User | null {
     const users = readJson<User[]>(USERS_FILE, []);
     return users.find((u) => u.username === username) || null;

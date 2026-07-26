@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 import { z } from "zod";
-import { LoginSchema } from "config/schema";
-import { authenticateUser, createSession, refreshSession, revokeSession } from "auth/index";
+import { LoginSchema, CreateUserSchema } from "config/schema";
+import { authenticateUser, createSession, refreshSession, revokeSession, createUser } from "auth/index";
 import { hashToken } from "auth/argon2";
 import { configStore } from "config/index";
 
@@ -9,8 +9,63 @@ const loginBodySchema = LoginSchema;
 const refreshBodySchema = z.object({
   refreshToken: z.string().optional(),
 });
+const setupBodySchema = CreateUserSchema;
 
 export const authRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
+  // Check if setup is needed (no admin user exists)
+  fastify.get("/setup/status", async () => {
+    const needsSetup = !configStore.hasAdminUser();
+    return { needsSetup };
+  });
+
+  // Initial admin setup (only works if no admin exists)
+  fastify.post<{ Body: z.infer<typeof setupBodySchema> }>(
+    "/setup",
+    {
+      schema: {
+        body: {
+          type: "object",
+          properties: {
+            username: { type: "string", minLength: 3, maxLength: 32 },
+            password: { type: "string", minLength: 8, maxLength: 128 },
+            role: { type: "string", enum: ["admin", "viewer"], default: "admin" },
+          },
+          required: ["username", "password"],
+        },
+      },
+    },
+    async (request, reply) => {
+      // Only allow setup if no admin exists
+      if (configStore.hasAdminUser()) {
+        return reply.code(403).send({ error: "Forbidden", message: "Admin user already exists" });
+      }
+
+      const { username, password, role } = request.body;
+      const user = await createUser({ username, password, role: role || "admin" });
+
+      // Create session for the new admin
+      const { accessToken, refreshToken } = createSession(user);
+
+      reply.setCookie("access_token", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 15 * 60,
+        path: "/",
+      });
+
+      reply.setCookie("refresh_token", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60,
+        path: "/",
+      });
+
+      return { user: { id: user.id, username: user.username, role: user.role } };
+    }
+  );
+
   fastify.post<{ Body: z.infer<typeof loginBodySchema> }>(
     "/login",
     {

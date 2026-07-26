@@ -11,13 +11,14 @@ services:
       - "2013:2013"
     volumes:
       - ./data:/app/data
+    # No .env file needed - secrets auto-generated at runtime
     environment:
       - NODE_ENV=production
       - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
-      - COOKIE_SECRET=${COOKIE_SECRET}
-      - LOG_LEVEL=info
+      # Optional: override auto-generated secrets
+      # - JWT_SECRET=your-custom-secret
+      # - JWT_REFRESH_SECRET=your-custom-refresh-secret
+      # - COOKIE_SECRET=your-custom-cookie-secret
     depends_on:
       redis:
         condition: service_healthy
@@ -41,7 +42,7 @@ services:
     networks:
       - starrbot-network
 
-  # Optional: RSSHub for social media feeds
+  # Optional: RSSHub for social media feeds (enable with: docker compose --profile with-rsshub up -d)
   rsshub:
     image: diygod/rsshub:latest
     container_name: starrbot-rsshub

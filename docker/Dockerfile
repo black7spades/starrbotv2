@@ -24,8 +24,8 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Install runtime dependencies (SQLite3 needs these)
-RUN apk add --no-cache sqlite-libs
+# Install runtime dependencies (SQLite3 needs these, openssl for secret generation)
+RUN apk add --no-cache sqlite-libs openssl
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
@@ -35,6 +35,10 @@ RUN addgroup -g 1001 -S nodejs && \
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nodejs:nodejs /app/package.json ./
+
+# Copy entrypoint script
+COPY --chown=nodejs:nodejs docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Create data directory
 RUN mkdir -p /app/data && chown -R nodejs:nodejs /app/data
@@ -46,4 +50,5 @@ EXPOSE 2013
 ENV NODE_ENV=production
 ENV REDIS_URL=redis://redis:6379
 
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["node", "dist/index.js"]
