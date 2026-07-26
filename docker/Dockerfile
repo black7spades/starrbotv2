@@ -38,6 +38,9 @@ WORKDIR /app
 # Install runtime dependencies (SQLite3 needs these, openssl for secret generation)
 RUN apk add --no-cache sqlite-libs openssl
 
+ARG GIT_HASH=unknown
+ENV GIT_HASH=${GIT_HASH}
+
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001

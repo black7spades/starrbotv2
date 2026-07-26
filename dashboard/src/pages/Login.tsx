@@ -2,17 +2,16 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
-import { useUIStore } from "../store/uiStore";
 import { api } from "../api/client";
 
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuthStore();
-  const { theme } = useUIStore();
   const [error, setError] = useState("");
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [version, setVersion] = useState("");
 
   const { register, handleSubmit, formState: { errors }, watch } = useForm({
     defaultValues: { username: "", password: "", confirmPassword: "" },
@@ -20,6 +19,7 @@ export default function Login() {
 
   useEffect(() => {
     api.request<{ needsSetup: boolean }>("/api/auth/setup/status").then(r => setNeedsSetup(r.needsSetup)).catch(() => setNeedsSetup(true));
+    api.getVersion().then(v => setVersion(v.version)).catch(() => {});
   }, []);
 
   const onSubmit = async (data: { username: string; password: string; confirmPassword?: string }) => {
@@ -60,14 +60,14 @@ export default function Login() {
 
   if (needsSetup === null) {
     return (
-      <div className={`min-h-screen flex items-center justify-center p-4 ${theme === "dark" ? "dark" : ""}`}>
+      <div className="min-h-screen flex items-center justify-center p-4">
         <div className="text-discord-muted">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className={`min-h-screen flex items-center justify-center p-4 ${theme === "dark" ? "dark" : ""}`}>
+    <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-discord-card rounded-2xl p-8 border border-discord-border">
           <div className="text-center mb-8">
@@ -130,6 +130,10 @@ export default function Login() {
             </button>
           </form>
         </div>
+
+        <p className="text-center mt-4 text-xs text-discord-muted/50 font-mono">
+          {version ? `v${version}` : ""}
+        </p>
       </div>
     </div>
   );
