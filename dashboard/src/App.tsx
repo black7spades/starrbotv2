@@ -6,6 +6,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import BotDetail from "./pages/BotDetail";
 import FunctionConfig from "./pages/FunctionConfig";
+import CreateBot from "./pages/CreateBot";
 import Settings from "./pages/Settings";
 import Layout from "./components/Layout";
 
@@ -30,6 +31,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/bots/create" element={<CreateBot />} />
           <Route path="/bots/:id" element={<BotDetail />} />
           <Route path="/bots/:botId/functions/:name" element={<FunctionConfig />} />
           <Route path="/settings" element={<Settings />} />

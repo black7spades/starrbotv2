@@ -12,6 +12,7 @@ import { userRoutes } from "./routes/users";
 import { botRoutes } from "./routes/bots";
 import { functionRoutes } from "./routes/functions";
 import { eventRoutes } from "./routes/events";
+import { settingsRoutes } from "./routes/settings";
 import { healthRoutes } from "./routes/health";
 import { authMiddleware, optionalAuth } from "auth/middleware";
 import { logger } from "utils/logger";
@@ -110,6 +111,7 @@ export async function createServer(): Promise<FastifyInstance> {
     await fastify.register(botRoutes, { prefix: "/api/bots" });
     await fastify.register(functionRoutes, { prefix: "/api/functions" });
     await fastify.register(eventRoutes, { prefix: "/api/events" });
+    await fastify.register(settingsRoutes, { prefix: "/api/settings" });
   });
 
   server.setErrorHandler((error, request, reply) => {

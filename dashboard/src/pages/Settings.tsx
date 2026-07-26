@@ -1,107 +1,48 @@
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { api } from "../api/client";
 import { useAuthStore } from "../store/authStore";
 import { useUIStore } from "../store/uiStore";
 
-const SettingsSchema = z.object({
-  commandPrefix: z.string().min(1).max(5),
-  theme: z.enum(["light", "dark"]),
-});
-
-type SettingsForm = z.infer<typeof SettingsSchema>;
-
-const UserSchema = z.object({
-  username: z.string().min(3).max(32).regex(/^[a-zA-Z0-9_-]+$/),
-  password: z.string().min(8).optional(),
-  role: z.enum(["admin", "viewer"]),
-});
-
-type UserForm = z.infer<typeof UserSchema>;
-
 export default function Settings() {
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const { theme, setTheme } = useUIStore();
-  const [settings, setSettings] = useState({ commandPrefix: "!", theme: "dark" as const });
   const [users, setUsers] = useState<Array<{ id: string; username: string; role: string }>>([]);
-  const [loading, setLoading] = useState(true);
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [editingUser, setEditingUser] = useState<string | null>(null);
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-  } = useForm<SettingsForm>({
-    resolver: zodResolver(SettingsSchema),
-    defaultValues: { commandPrefix: "!", theme: "dark" },
-  });
-
-  const {
-    register: registerUser,
-    handleSubmit: handleUserSubmit,
-    reset: resetUserForm,
-    formState: { errors: userErrors },
-  } = useForm<UserForm>({
-    resolver: zodResolver(UserSchema),
-  });
+  const [newUsername, setNewUsername] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newRole, setNewRole] = useState<"admin" | "viewer">("viewer");
+  const [editRole, setEditRole] = useState<"admin" | "viewer">("viewer");
+  const [editPassword, setEditPassword] = useState("");
 
   useEffect(() => {
-    loadSettings();
-    loadUsers();
+    api.getUsers().then(setUsers).catch(() => {});
   }, []);
 
-  const loadSettings = async () => {
-    try {
-      const data = await api.getSettings();
-      setSettings(data);
-      if (data.theme) setTheme(data.theme);
-    } catch (err) {
-      console.error("Failed to load settings:", err);
-    } finally {
-      setLoading(false);
-    }
+  const handleThemeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const t = e.target.value as "light" | "dark";
+    setTheme(t);
+    api.updateSettings({ theme: t }).catch(() => {});
   };
 
-  const loadUsers = async () => {
+  const createUser = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      const data = await api.getUsers();
-      setUsers(data);
-    } catch (err) {
-      console.error("Failed to load users:", err);
-    }
-  };
-
-  const onSettingsSubmit = async (data: SettingsForm) => {
-    try {
-      await api.updateSettings(data);
-      setSettings(data);
-      if (data.theme) setTheme(data.theme);
-      alert("Settings saved");
-    } catch (err: any) {
-      alert(err.message || "Failed to save settings");
-    }
-  };
-
-  const onCreateUser = async (data: UserForm) => {
-    try {
-      await api.createUser(data);
-      resetUserForm();
+      await api.createUser({ username: newUsername, password: newPassword, role: newRole });
+      setNewUsername(""); setNewPassword(""); setNewRole("viewer");
       setShowCreateUser(false);
-      loadUsers();
+      api.getUsers().then(setUsers);
     } catch (err: any) {
       alert(err.message || "Failed to create user");
     }
   };
 
-  const onUpdateUser = async (id: string, data: Partial<UserForm>) => {
+  const updateUser = async (id: string) => {
     try {
-      await api.updateUser(id, data);
+      await api.updateUser(id, { role: editRole, ...(editPassword ? { password: editPassword } : {}) });
       setEditingUser(null);
-      loadUsers();
+      setEditPassword("");
+      api.getUsers().then(setUsers);
     } catch (err: any) {
       alert(err.message || "Failed to update user");
     }
@@ -112,7 +53,7 @@ export default function Settings() {
     if (!confirm("Delete this user?")) return;
     try {
       await api.deleteUser(id);
-      loadUsers();
+      api.getUsers().then(setUsers);
     } catch (err: any) {
       alert(err.message || "Failed to delete user");
     }
@@ -125,29 +66,19 @@ export default function Settings() {
       {/* General Settings */}
       <section className="p-6 bg-discord-card rounded-xl border border-discord-border">
         <h2 className="text-lg font-semibold mb-4">General</h2>
-        <form onSubmit={handleSubmit(onSettingsSubmit)} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Command Prefix</label>
-            <input
-              {...register("commandPrefix")}
-              className="w-full max-w-xs px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent"
-            />
-            {errors.commandPrefix && <p className="text-discord-red text-sm mt-1">{errors.commandPrefix.message}</p>}
-          </div>
-
+        <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-2">Theme</label>
             <select
-              {...register("theme")}
+              value={theme}
+              onChange={handleThemeChange}
               className="w-full max-w-xs px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent"
             >
               <option value="dark">Dark</option>
               <option value="light">Light</option>
             </select>
           </div>
-
-          <button type="submit" className="btn-primary">Save Settings</button>
-        </form>
+        </div>
       </section>
 
       {/* User Management */}
@@ -163,41 +94,27 @@ export default function Settings() {
         </div>
 
         {showCreateUser && (
-          <form onSubmit={handleUserSubmit(onCreateUser)} className="mb-6 p-4 bg-discord-input/50 rounded-lg space-y-4">
+          <form onSubmit={createUser} className="mb-6 p-4 bg-discord-input/50 rounded-lg space-y-4">
             <h3 className="font-semibold">Create New User</h3>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium mb-1">Username</label>
-                <input
-                  {...registerUser("username")}
-                  className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent"
-                />
-                {userErrors.username && <p className="text-discord-red text-sm mt-1">{userErrors.username.message}</p>}
+                <input value={newUsername} onChange={e => setNewUsername(e.target.value)} required minLength={3} className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Role</label>
-                <select
-                  {...registerUser("role")}
-                  className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent"
-                >
+                <select value={newRole} onChange={e => setNewRole(e.target.value as "admin" | "viewer")} className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent">
                   <option value="viewer">Viewer</option>
                   <option value="admin">Admin</option>
                 </select>
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium mb-1">Password</label>
-                <input
-                  type="password"
-                  {...registerUser("password")}
-                  className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent"
-                />
-                {userErrors.password && <p className="text-discord-red text-sm mt-1">{userErrors.password.message}</p>}
+                <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required minLength={8} className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent" />
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => { setShowCreateUser(false); resetUserForm(); }} className="btn-secondary">
-                Cancel
-              </button>
+              <button type="button" onClick={() => setShowCreateUser(false)} className="btn-secondary">Cancel</button>
               <button type="submit" className="btn-primary">Create User</button>
             </div>
           </form>
@@ -226,7 +143,7 @@ export default function Settings() {
                       {u.id !== user?.id && (
                         <>
                           <button
-                            onClick={() => { setEditingUser(u.id); }}
+                            onClick={() => { setEditingUser(u.id); setEditRole(u.role as "admin" | "viewer"); setEditPassword(""); }}
                             className="text-discord-muted hover:text-discord-text text-sm"
                           >
                             Edit
@@ -252,26 +169,17 @@ export default function Settings() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="bg-discord-card rounded-xl border border-discord-border p-6 w-full max-w-md">
               <h3 className="text-lg font-semibold mb-4">Edit User: {users.find(u => u.id === editingUser)?.username}</h3>
-              <form onSubmit={(e) => { e.preventDefault(); onUpdateUser(editingUser!, { role: (e.target as any).role.value }); setEditingUser(null); }} className="space-y-4">
+              <form onSubmit={(e) => { e.preventDefault(); updateUser(editingUser); }} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Role</label>
-                  <select
-                    name="role"
-                    defaultValue={users.find(u => u.id === editingUser)?.role}
-                    className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent"
-                  >
+                  <select value={editRole} onChange={e => setEditRole(e.target.value as "admin" | "viewer")} className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent">
                     <option value="viewer">Viewer</option>
                     <option value="admin">Admin</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">New Password (optional)</label>
-                  <input
-                    type="password"
-                    name="password"
-                    className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent"
-                    placeholder="Leave empty to keep current"
-                  />
+                  <input type="password" value={editPassword} onChange={e => setEditPassword(e.target.value)} className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent" placeholder="Leave empty to keep current" />
                 </div>
                 <div className="flex justify-end gap-2">
                   <button type="button" onClick={() => setEditingUser(null)} className="btn-secondary">Cancel</button>
