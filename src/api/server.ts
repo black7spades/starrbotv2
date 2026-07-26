@@ -98,7 +98,10 @@ export async function createServer(): Promise<FastifyInstance> {
 
   await server.register(healthRoutes);
 
-  await server.register(authRoutes, { prefix: "/api/auth" });
+  await server.register(async (fastify) => {
+    fastify.addHook("onRequest", optionalAuth);
+    await fastify.register(authRoutes, { prefix: "/api/auth" });
+  });
 
   await server.register(async (fastify) => {
     fastify.addHook("onRequest", authMiddleware);
