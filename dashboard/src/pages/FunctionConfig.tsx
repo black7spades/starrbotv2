@@ -41,20 +41,31 @@ export default function FunctionConfig() {
   const loadFunction = async () => {
     try {
       setLoading(true);
-      const [manifestData, configData] = await Promise.all([
-        api.getFunctionManifest(name!),
-        api.getBotFunction(botId!, name!),
-      ]);
+      const manifestData = await api.getFunctionManifest(name!);
       setManifest(manifestData);
-      setCurrentConfig(configData.config || {});
-      setValue("enabled", configData.enabled || false);
-      if (configData.config) {
-        Object.entries(configData.config).forEach(([key, value]) => {
-          setValue(`config.${key}`, value as any);
-        });
+      const defaults = manifestData.defaultConfig || {};
+
+      try {
+        const configData = await api.getBotFunction(botId!, name!);
+        setCurrentConfig(configData.config || {});
+        setValue("enabled", configData.enabled ?? false);
+        if (configData.config) {
+          Object.entries(configData.config).forEach(([key, value]) => {
+            setValue(`config.${key}`, value as any);
+          });
+        }
+      } catch {
+        // function not yet configured for this bot — use defaults
+        setCurrentConfig(defaults);
+        if (defaults) {
+          Object.entries(defaults).forEach(([key, value]) => {
+            setValue(`config.${key}`, value as any);
+          });
+        }
       }
     } catch (err) {
       console.error("Failed to load function:", err);
+      setManifest(null);
     } finally {
       setLoading(false);
     }

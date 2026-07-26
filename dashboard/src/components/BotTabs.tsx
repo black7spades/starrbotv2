@@ -1,4 +1,6 @@
-import { NavLink } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { api } from "../api/client";
 
 interface BotTabsProps {
   activeTab: string;
@@ -52,53 +54,60 @@ function OverviewTab({ bot }: { bot: any }) {
 }
 
 function FunctionsTab({ bot }: { bot: any }) {
-  if (!bot.functions || bot.functions.length === 0) {
+  const navigate = useNavigate();
+  const [manifests, setManifests] = useState<any[]>([]);
+
+  useEffect(() => {
+    api.get<any[]>("/api/functions").then(setManifests).catch(() => {});
+  }, []);
+
+  const botFnMap = new Map<string, any>((bot.functions || []).map((f: any) => [f.functionName, f]));
+
+  if (manifests.length === 0 && (!bot.functions || bot.functions.length === 0)) {
     return (
       <div className="text-center py-12 text-discord-muted">
-        <p className="text-xl mb-2">🔧 No functions configured</p>
-        <p>Enable functions from the Settings page</p>
+        <p className="text-xl mb-2">🔧 No functions available</p>
+        <p className="text-sm">No function packages are installed on this server.</p>
       </div>
     );
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      {bot.functions.map((fn: any) => (
-        <FunctionCard key={fn.functionName} fn={fn} />
-      ))}
-    </div>
-  );
-}
-
-function FunctionCard({ fn }: { fn: any }) {
-  return (
-    <div className="p-4 bg-discord-card rounded-xl border border-discord-border">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">{fn.manifest?.icon || "🔧"}</span>
-          <div>
-            <h3 className="font-semibold">{fn.manifest?.label || fn.functionName}</h3>
-            <p className="text-sm text-discord-muted">{fn.manifest?.description}</p>
-          </div>
-        </div>
-        <span
-          className={`px-2 py-1 rounded text-xs font-medium ${
-            fn.enabled
-              ? "bg-discord-green/20 text-discord-green"
-              : "bg-discord-muted/20 text-discord-muted"
-          }`}
-        >
-          {fn.enabled ? "Enabled" : "Disabled"}
-        </span>
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2">
+        {manifests.map((m: any) => {
+          const existing = botFnMap.get(m.name);
+          const enabled = existing?.enabled ?? false;
+          return (
+            <button
+              key={m.name}
+              onClick={() => navigate(`/bots/${bot.id}/functions/${m.name}`)}
+              className="text-left p-4 bg-discord-card rounded-xl border border-discord-border hover:border-discord-accent/50 transition-colors"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-2xl shrink-0">{m.icon || "🔧"}</span>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold truncate">{m.label}</h3>
+                    <p className="text-sm text-discord-muted line-clamp-2">{m.description}</p>
+                  </div>
+                </div>
+                {existing ? (
+                  <span className={`shrink-0 px-2 py-1 rounded text-xs font-medium ${
+                    enabled ? "bg-discord-green/20 text-discord-green" : "bg-discord-muted/20 text-discord-muted"
+                  }`}>
+                    {enabled ? "Enabled" : "Disabled"}
+                  </span>
+                ) : (
+                  <span className="shrink-0 px-2 py-1 rounded text-xs font-medium bg-discord-accent/20 text-discord-accent">
+                    Add
+                  </span>
+                )}
+              </div>
+            </button>
+          );
+        })}
       </div>
-
-      {fn.enabled && (
-        <div className="space-y-2 text-sm">
-          <p className="text-discord-muted">
-            {fn.config ? Object.keys(fn.config).length : 0} settings configured
-          </p>
-        </div>
-      )}
     </div>
   );
 }
