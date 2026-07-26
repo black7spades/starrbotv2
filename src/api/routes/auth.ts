@@ -48,7 +48,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
 
       reply.setCookie("access_token", accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: request.protocol === "https",
         sameSite: "lax",
         maxAge: 15 * 60,
         path: "/",
@@ -56,7 +56,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
 
       reply.setCookie("refresh_token", refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: request.protocol === "https",
         sameSite: "lax",
         maxAge: 7 * 24 * 60 * 60,
         path: "/",
@@ -92,7 +92,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
 
       reply.setCookie("access_token", accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: request.protocol === "https",
         sameSite: "lax",
         maxAge: 15 * 60,
         path: "/",
@@ -100,7 +100,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
 
       reply.setCookie("refresh_token", refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: request.protocol === "https",
         sameSite: "lax",
         maxAge: 7 * 24 * 60 * 60,
         path: "/",
@@ -136,7 +136,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
 
       reply.setCookie("access_token", tokens.accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: request.protocol === "https",
         sameSite: "lax",
         maxAge: 15 * 60,
         path: "/",
@@ -144,7 +144,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
 
       reply.setCookie("refresh_token", tokens.refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: request.protocol === "https",
         sameSite: "lax",
         maxAge: 7 * 24 * 60 * 60,
         path: "/",
