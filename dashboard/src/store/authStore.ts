@@ -25,7 +25,7 @@ export const useAuthStore = create<AuthState>()(
       initAuth: async () => {
         try {
           const res = await api.getMe();
-          set({ user: res.user, loading: false });
+          set({ user: (res.user as JWTPayload) || null, loading: false });
         } catch {
           set({ user: null, loading: false });
         }
@@ -33,7 +33,7 @@ export const useAuthStore = create<AuthState>()(
 
       login: async (username: string, password: string) => {
         const res = await api.login(username, password);
-        set({ user: res.user, loading: false });
+        set({ user: res.user as JWTPayload, loading: false });
       },
 
       logout: async () => {

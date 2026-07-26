@@ -6,30 +6,13 @@ import { BotTabs } from "../components/BotTabs";
 import { useBotStore } from "../store/botStore";
 import { useAuthStore } from "../store/authStore";
 
-interface BotDetailData {
-  id: string;
-  name: string;
-  avatarUrl?: string;
-  enabled: boolean;
-  token: string;
-  clientId: string;
-  status: string;
-  error?: string | null;
-  guildCount: number;
-  functions: Array<{
-    functionName: string;
-    config: Record<string, unknown>;
-    enabled: boolean;
-  }>;
-}
-
 export default function BotDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const { selectBot } = useBotStore();
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab] = useState("overview");
 
   const { data: bot, isLoading, error } = useQuery({
     queryKey: ["bot", id],
@@ -101,7 +84,7 @@ export default function BotDetail() {
                   : "bg-discord-muted/20 text-discord-muted"
               }`}
             >
-              {bot.status.charAt(0).toUpperCase() + bot.status.slice(1)}
+              {(bot.status || "stopped").charAt(0).toUpperCase() + (bot.status || "stopped").slice(1)}
             </span>
 
             {bot.status === "running" && (
@@ -151,9 +134,7 @@ export default function BotDetail() {
       {/* Tabs */}
       <BotTabs
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
         bot={bot}
-        isAdmin={isAdmin}
       />
     </div>
   );

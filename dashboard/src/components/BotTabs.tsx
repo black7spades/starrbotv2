@@ -1,11 +1,8 @@
-import { useState } from "react";
 import { NavLink } from "react-router-dom";
 
 interface BotTabsProps {
   activeTab: string;
-  setActiveTab: (tab: string) => void;
   bot: any;
-  isAdmin: boolean;
 }
 
 const tabs = [
@@ -14,7 +11,7 @@ const tabs = [
   { id: "logs", label: "Logs", icon: "📝" },
 ];
 
-export function BotTabs({ activeTab, setActiveTab, bot, isAdmin }: BotTabsProps) {
+export function BotTabs({ activeTab, bot }: BotTabsProps) {
   return (
     <div>
       <div className="flex border-b border-discord-border mb-6">
@@ -37,7 +34,7 @@ export function BotTabs({ activeTab, setActiveTab, bot, isAdmin }: BotTabsProps)
       </div>
 
       {activeTab === "overview" && <OverviewTab bot={bot} />}
-      {activeTab === "functions" && <FunctionsTab bot={bot} isAdmin={isAdmin} />}
+      {activeTab === "functions" && <FunctionsTab bot={bot} />}
       {activeTab === "logs" && <LogsTab botId={bot.id} />}
     </div>
   );
@@ -54,7 +51,7 @@ function OverviewTab({ bot }: { bot: any }) {
   );
 }
 
-function FunctionsTab({ bot, isAdmin }: { bot: any; isAdmin: boolean }) {
+function FunctionsTab({ bot }: { bot: any }) {
   if (!bot.functions || bot.functions.length === 0) {
     return (
       <div className="text-center py-12 text-discord-muted">
@@ -67,13 +64,13 @@ function FunctionsTab({ bot, isAdmin }: { bot: any; isAdmin: boolean }) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {bot.functions.map((fn: any) => (
-        <FunctionCard key={fn.functionName} fn={fn} isAdmin={isAdmin} />
+        <FunctionCard key={fn.functionName} fn={fn} />
       ))}
     </div>
   );
 }
 
-function FunctionCard({ fn, isAdmin }: { fn: any; isAdmin: boolean }) {
+function FunctionCard({ fn }: { fn: any }) {
   return (
     <div className="p-4 bg-discord-card rounded-xl border border-discord-border">
       <div className="flex items-start justify-between mb-3">

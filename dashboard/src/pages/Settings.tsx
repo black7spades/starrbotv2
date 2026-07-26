@@ -86,7 +86,7 @@ export default function Settings() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">User Management</h2>
           <button
-            onClick={() => { setShowCreateUser(true); resetUserForm(); }}
+            onClick={() => { setShowCreateUser(true); setNewUsername(""); setNewPassword(""); setNewRole("viewer"); }}
             className="btn-primary"
           >
             + Add User

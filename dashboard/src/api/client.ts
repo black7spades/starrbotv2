@@ -69,7 +69,7 @@ class ApiClient {
   }
 
   createBot(data: any) {
-    return this.post("/api/bots", data);
+    return this.post<{ id: string; name: string }>("/api/bots", data);
   }
 
   updateBot(id: string, data: any) {
@@ -95,6 +95,14 @@ class ApiClient {
   // Functions
   getFunctions() {
     return this.get<any[]>("/api/functions");
+  }
+
+  getFunctionManifest(name: string) {
+    return this.get<any>(`/api/functions/${name}`);
+  }
+
+  getBotFunction(botId: string, functionName: string) {
+    return this.get<any>(`/api/bots/${botId}/functions/${functionName}`);
   }
 
   updateFunctionConfig(botId: string, functionName: string, data: any) {

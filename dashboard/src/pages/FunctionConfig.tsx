@@ -4,10 +4,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { api } from "../api/client";
-import { useAuthStore } from "../store/authStore";
 
 const FunctionConfigSchema = z.object({
-  config: z.record(z.unknown()).optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
   enabled: z.boolean().optional(),
 });
 
@@ -16,7 +15,6 @@ type FunctionConfigForm = z.infer<typeof FunctionConfigSchema>;
 export default function FunctionConfig() {
   const { botId, name } = useParams<{ botId: string; name: string }>();
   const navigate = useNavigate();
-  const { user } = useAuthStore();
 
   const [manifest, setManifest] = useState<any>(null);
   const [currentConfig, setCurrentConfig] = useState<any>({});
@@ -121,7 +119,6 @@ export default function FunctionConfig() {
             <h2 className="text-lg font-semibold">Configuration</h2>
             {Object.entries(configFields).map(([key, field]: [string, any]) => (
               <ConfigField
-                key={key}
                 key={key}
                 name={key}
                 field={field}

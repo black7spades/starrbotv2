@@ -9,7 +9,16 @@ import { validateBotToken } from "discord/validation";
 export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   fastify.get("/", { preHandler: optionalAuth }, async () => {
     const bots = configStore.getBotSummaries();
-    return { bots };
+    const summaries = botManager.getAllBotSummaries();
+    const statusMap: Record<string, { status: string; error: string | null; guildCount: number }> = {};
+    for (const s of summaries) {
+      statusMap[s.id] = { status: s.status, error: s.error, guildCount: s.guildCount };
+    }
+    const enriched = bots.map((b) => ({
+      ...b,
+      ...(statusMap[b.id] || { status: "stopped", error: null, guildCount: 0 }),
+    }));
+    return { bots: enriched };
   });
 
   fastify.get<{ Params: { id: string } }>(
@@ -22,10 +31,22 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
       }
 
       const functions = configStore.getBotFunctions(bot.id);
-      const runtime = botManager.getBot(bot.id);
+      const managed = botManager.getBot(bot.id);
 
       return {
         ...bot,
+        status: managed?.status || "stopped",
+        error: managed?.error || null,
+        guildCount: managed?.stats?.guildCount || 0,
+        runtime: managed
+          ? {
+              uptime: managed.stats?.uptime || null,
+              lastCheck: managed.stats?.lastCheck || null,
+              postsSent: managed.stats?.postsSent || 0,
+              errors: managed.stats?.errors || 0,
+              functions: managed.stats?.functions || [],
+            }
+          : null,
         functions: functions.map((f) => ({
           functionName: f.functionName,
           config: f.config,

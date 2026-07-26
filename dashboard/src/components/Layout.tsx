@@ -1,14 +1,10 @@
-import { useState } from "react";
-import { Outlet, NavLink, useLocation } from "react-router-dom";
+import { Outlet, NavLink } from "react-router-dom";
 import { useUIStore } from "../store/uiStore";
 import { useAuthStore } from "../store/authStore";
-import { authApi } from "../api/client";
 
 export default function Layout() {
   const { theme, sidebarOpen, toggleSidebar, toggleTheme } = useUIStore();
   const { user, logout } = useAuthStore();
-  const location = useLocation();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems = [
     { path: "/", label: "Dashboard", icon: "📊" },
@@ -16,7 +12,11 @@ export default function Layout() {
   ];
 
   const handleLogout = async () => {
-    await logout();
+    try {
+      await logout();
+    } catch {
+      // logout failed silently, store already cleared
+    }
   };
 
   return (
