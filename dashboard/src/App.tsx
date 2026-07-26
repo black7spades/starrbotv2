@@ -8,6 +8,7 @@ import BotDetail from "./pages/BotDetail";
 import FunctionConfig from "./pages/FunctionConfig";
 import CreateBot from "./pages/CreateBot";
 import Settings from "./pages/Settings";
+import Functions from "./pages/Functions";
 import Layout from "./components/Layout";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -32,6 +33,7 @@ function App() {
         <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/bots/create" element={<CreateBot />} />
+          <Route path="/functions" element={<Functions />} />
           <Route path="/bots/:botId/functions/:name" element={<FunctionConfig />} />
           <Route path="/bots/:id" element={<BotDetail />} />
           <Route path="/settings" element={<Settings />} />

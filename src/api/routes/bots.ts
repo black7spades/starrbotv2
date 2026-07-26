@@ -138,6 +138,20 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
     }
   );
 
+  fastify.get<{ Params: { id: string; functionName: string } }>(
+    "/:id/functions/:functionName",
+    { preHandler: optionalAuth },
+    async (request, reply) => {
+      const { id, functionName } = request.params;
+      const bot = configStore.getBot(id);
+      if (!bot) {
+        return reply.code(404).send({ error: "Not Found", message: "Bot not found" });
+      }
+      const fn = configStore.getBotFunction(id, functionName);
+      return fn || { functionName, config: {}, enabled: false };
+    }
+  );
+
   fastify.post<{ Params: { id: string } }>(
     "/:id/start",
     { preHandler: requireAdmin },

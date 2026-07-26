@@ -8,6 +8,7 @@ export default function Layout() {
 
   const navItems = [
     { path: "/", label: "Dashboard", icon: "📊" },
+    { path: "/functions", label: "Functions", icon: "⚡" },
     { path: "/settings", label: "Settings", icon: "⚙️" },
   ];
 
