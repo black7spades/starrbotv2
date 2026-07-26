@@ -5,6 +5,7 @@ import { configStore } from "config/index";
 import { requireAdmin, optionalAuth } from "auth/middleware";
 import { botManager } from "discord/manager";
 import { validateBotToken } from "discord/validation";
+import { systemLog } from "utils/systemLog";
 
 function maskToken(token: string): string {
   if (!token || token.length < 8) return "••••••••";
@@ -211,12 +212,14 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
         return reply.code(404).send({ error: "Not Found", message: "Bot not found" });
       }
 
-      try {
-        await botManager.startBot(bot);
-        return { ok: true };
-      } catch (error: any) {
-        return reply.code(500).send({ error: "Internal Server Error", message: error.message });
+      if (botManager.getBot(bot.id)?.status === "running") {
+        return reply.code(409).send({ error: "Conflict", message: "Bot already running" });
       }
+
+      botManager.startBot(bot).catch((err) => {
+        systemLog.add("error", `Failed to start bot ${bot.name}: ${err.message}`, `bot:${bot.id}`);
+      });
+      return { ok: true, status: "starting" };
     }
   );
 
@@ -229,12 +232,10 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
         return reply.code(404).send({ error: "Not Found", message: "Bot not found" });
       }
 
-      try {
-        await botManager.stopBot(bot.id);
-        return { ok: true };
-      } catch (error: any) {
-        return reply.code(500).send({ error: "Internal Server Error", message: error.message });
-      }
+      botManager.stopBot(bot.id).catch((err) => {
+        systemLog.add("error", `Failed to stop bot ${bot.name}: ${err.message}`, `bot:${bot.id}`);
+      });
+      return { ok: true, status: "stopped" };
     }
   );
 
@@ -247,12 +248,10 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
         return reply.code(404).send({ error: "Not Found", message: "Bot not found" });
       }
 
-      try {
-        await botManager.restartBot(bot);
-        return { ok: true };
-      } catch (error: any) {
-        return reply.code(500).send({ error: "Internal Server Error", message: error.message });
-      }
+      botManager.restartBot(bot).catch((err) => {
+        systemLog.add("error", `Failed to restart bot ${bot.name}: ${err.message}`, `bot:${bot.id}`);
+      });
+      return { ok: true, status: "starting" };
     }
   );
 };

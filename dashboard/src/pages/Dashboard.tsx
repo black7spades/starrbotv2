@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
+import { BotCard, BotCardSkeleton } from "../components/BotCard";
 
 function DashboardContent() {
-  const { data: botsData } = useQuery({
+  const { data: botsData, isLoading } = useQuery({
     queryKey: ["bots"],
     queryFn: () => api.getBots(),
     refetchInterval: 10000,
@@ -33,7 +34,11 @@ function DashboardContent() {
       </div>
 
       {/* Bot Grid */}
-      {bots.length === 0 ? (
+      {isLoading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => <BotCardSkeleton key={i} />)}
+        </div>
+      ) : bots.length === 0 ? (
         <div className="text-center py-16">
           <div className="text-6xl mb-4">🤖</div>
           <h2 className="text-xl font-semibold mb-2">No bots yet</h2>
@@ -64,43 +69,6 @@ function StatCard({ label, value, icon }: { label: string; value: number; icon: 
         <span className="text-4xl">{icon}</span>
       </div>
     </div>
-  );
-}
-
-function BotCard({ bot }: { bot: any }) {
-  const statusColors = {
-    running: "bg-discord-green/20 text-discord-green",
-    stopped: "bg-discord-muted/20 text-discord-muted",
-    error: "bg-discord-red/20 text-discord-red",
-    starting: "bg-yellow-400/20 text-yellow-400",
-  };
-
-  return (
-    <Link to={`/bots/${bot.id}`} className="block p-4 bg-discord-card rounded-xl border border-discord-border hover:border-discord-accent/50 transition-colors">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          {bot.avatarUrl ? (
-            <img src={bot.avatarUrl} alt={bot.name} className="w-12 h-12 rounded-lg" />
-          ) : (
-            <div className="w-12 h-12 rounded-lg bg-discord-accent/20 flex items-center justify-center text-xl">
-              🤖
-            </div>
-          )}
-          <div>
-            <h3 className="font-semibold">{bot.name}</h3>
-            <p className="text-sm text-discord-muted">{bot.id}</p>
-          </div>
-        </div>
-        <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[bot.status as keyof typeof statusColors] || statusColors.stopped}`}>
-          {bot.status}
-        </span>
-      </div>
-
-      <div className="mt-3 pt-3 border-t border-discord-border flex items-center justify-between text-sm text-discord-muted">
-        <span>{bot.activeFunctions?.length || 0} functions</span>
-        <span>{bot.guildCount || 0} guilds</span>
-      </div>
-    </Link>
   );
 }
 
