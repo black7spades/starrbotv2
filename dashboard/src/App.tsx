@@ -7,6 +7,7 @@ import Dashboard from "./pages/Dashboard";
 import BotDetail from "./pages/BotDetail";
 import FunctionConfig from "./pages/FunctionConfig";
 import CreateBot from "./pages/CreateBot";
+import EditBot from "./pages/EditBot";
 import Settings from "./pages/Settings";
 import Functions from "./pages/Functions";
 import Layout from "./components/Layout";
@@ -33,6 +34,7 @@ function App() {
         <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/bots/create" element={<CreateBot />} />
+          <Route path="/bots/:id/edit" element={<EditBot />} />
           <Route path="/functions" element={<Functions />} />
           <Route path="/bots/:id/functions" element={<BotDetail />} />
           <Route path="/bots/:botId/functions/:name" element={<FunctionConfig />} />

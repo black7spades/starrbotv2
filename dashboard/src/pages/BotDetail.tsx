@@ -118,6 +118,13 @@ export default function BotDetail() {
             )}
 
             <button
+              onClick={() => navigate(`/bots/${id}/edit`)}
+              className="btn-secondary text-sm"
+            >
+              Edit
+            </button>
+
+            <button
               onClick={() => {
                 if (confirm(`Delete "${bot.name}"? This cannot be undone.`)) {
                   deleteMutation.mutate();
