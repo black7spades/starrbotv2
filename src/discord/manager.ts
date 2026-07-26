@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Events, REST, Routes } from "discord.js";
+import { Client, GatewayIntentBits, Events, REST, Routes, EmbedBuilder } from "discord.js";
 import { EventEmitter } from "events";
 import { configStore } from "config/index";
 import { functionRegistry } from "functions/registry/index";
@@ -82,7 +82,12 @@ function createBotInstance(botConfig: Bot): ManagedBot {
 
   async function registerCommands(): Promise<void> {
     const rest = new REST({ version: "10" }).setToken(botConfig.token);
-    const commands: any[] = [];
+    const commands: any[] = [
+      {
+        name: "help",
+        description: "List all available slash commands",
+      } as any,
+    ];
 
     for (const [, instance] of functions) {
       if (instance.manifest?.commands) {
@@ -119,6 +124,30 @@ function createBotInstance(botConfig: Bot): ManagedBot {
 
     client.on(Events.InteractionCreate, async (interaction) => {
       if (!interaction.isChatInputCommand()) return;
+
+      if (interaction.commandName === "help") {
+        const embed = new EmbedBuilder()
+          .setTitle("Available Commands")
+          .setColor(0x5865f2)
+          .setTimestamp();
+
+        let hasCommands = false;
+        for (const [name, instance] of functions) {
+          const cmds = instance.manifest?.commands || [];
+          if (cmds.length === 0) continue;
+          hasCommands = true;
+          const cmdList = cmds.map((c: any) => `\`/${c.name}\` — ${c.description || "No description"}`).join("\n");
+          const label = instance.manifest?.label || name;
+          embed.addFields({ name: `${instance.manifest?.icon || "🔧"} ${label}`, value: cmdList });
+        }
+
+        if (!hasCommands) {
+          embed.setDescription("No commands enabled. Enable functions in the dashboard first.");
+        }
+
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+        return;
+      }
 
       const commandName = interaction.commandName;
       for (const [name, instance] of functions) {

@@ -109,12 +109,21 @@ function FunctionsTab({ bot }: { bot: any }) {
               onClick={() => navigate(`/bots/${bot.id}/functions/${m.name}`)}
               className="text-left p-4 bg-discord-card rounded-xl border border-discord-border hover:border-discord-accent/50 transition-colors"
             >
-              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <span className="text-2xl shrink-0">{m.icon || "🔧"}</span>
                   <div className="min-w-0">
                     <h3 className="font-semibold truncate">{m.label}</h3>
                     <p className="text-sm text-discord-muted line-clamp-2">{m.description}</p>
+                    {m.commands && m.commands.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {m.commands.map((cmd: any) => (
+                          <span key={cmd.name} className="px-1.5 py-0.5 bg-discord-accent/10 text-discord-accent rounded text-xs font-mono">
+                            /{cmd.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
                 {existing ? (

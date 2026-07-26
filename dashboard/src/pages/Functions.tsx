@@ -78,6 +78,15 @@ export default function Functions() {
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold">{m.label}</h3>
                 <p className="text-sm text-discord-muted line-clamp-2">{m.description}</p>
+                {m.commands && m.commands.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {m.commands.map((cmd: any) => (
+                      <span key={cmd.name} className="px-2 py-0.5 bg-discord-accent/10 text-discord-accent rounded text-xs font-mono">
+                        /{cmd.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <div className="mt-2 flex items-center gap-2 text-xs text-discord-muted">
                   <span>v{m.version}</span>
                 </div>
