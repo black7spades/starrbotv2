@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { BotTabs } from "../components/BotTabs";
@@ -9,10 +9,11 @@ import { useAuthStore } from "../store/authStore";
 export default function BotDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const { selectBot } = useBotStore();
-  const [activeTab] = useState("overview");
+  const activeTab = location.pathname.endsWith("/functions") ? "functions" : "overview";
 
   const { data: bot, isLoading, error } = useQuery({
     queryKey: ["bot", id],

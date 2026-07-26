@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
@@ -17,9 +17,13 @@ export default function Functions() {
     queryFn: () => api.getFunctions(),
   });
 
-  const [selectedBotId, setSelectedBotId] = useState<string>(
-    bots.length === 1 ? bots[0].id : ""
-  );
+  const [selectedBotId, setSelectedBotId] = useState<string>("");
+
+  useEffect(() => {
+    if (bots.length === 1 && !selectedBotId) {
+      setSelectedBotId(bots[0].id);
+    }
+  }, [bots, selectedBotId]);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">

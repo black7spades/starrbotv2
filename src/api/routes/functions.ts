@@ -6,7 +6,7 @@ import { requireAdmin, optionalAuth } from "auth/middleware";
 import { botManager } from "discord/manager";
 
 const updateFunctionBodySchema = z.object({
-  config: z.record(z.unknown()).optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
   enabled: z.boolean().optional(),
 });
 

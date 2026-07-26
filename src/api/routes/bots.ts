@@ -152,6 +152,24 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
     }
   );
 
+  fastify.patch<{ Params: { id: string; functionName: string }; Body: { config?: Record<string, unknown>; enabled?: boolean } }>(
+    "/:id/functions/:functionName",
+    { preHandler: requireAdmin },
+    async (request, reply) => {
+      const { id, functionName } = request.params;
+      const bot = configStore.getBot(id);
+      if (!bot) {
+        return reply.code(404).send({ error: "Not Found", message: "Bot not found" });
+      }
+      const updated = configStore.upsertBotFunction(id, functionName, request.body);
+      const runtime = botManager.getBot(id);
+      if (runtime && runtime.status === "running") {
+        await runtime.reloadFunction(functionName);
+      }
+      return { functionName, ...updated };
+    }
+  );
+
   fastify.post<{ Params: { id: string } }>(
     "/:id/start",
     { preHandler: requireAdmin },
