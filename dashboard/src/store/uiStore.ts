@@ -22,6 +22,19 @@ function applyTheme(theme: Theme) {
   document.documentElement.classList.toggle("dark", resolved === "dark");
 }
 
+let mediaQueryCleanup: (() => void) | null = null;
+
+function watchSystemTheme() {
+  if (mediaQueryCleanup) mediaQueryCleanup();
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  const handler = () => {
+    const current = useUIStore.getState().theme;
+    if (current === "system") applyTheme("system");
+  };
+  mq.addEventListener("change", handler);
+  mediaQueryCleanup = () => mq.removeEventListener("change", handler);
+}
+
 export const useUIStore = create<UIState>()(
   persist(
     (set, get) => ({
@@ -38,7 +51,10 @@ export const useUIStore = create<UIState>()(
         set({ theme });
       },
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
-      initTheme: () => applyTheme(get().theme),
+      initTheme: () => {
+        applyTheme(get().theme);
+        watchSystemTheme();
+      },
     }),
     {
       name: "ui-storage",

@@ -53,7 +53,7 @@ export default function EditBot() {
     <div className="max-w-lg mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Edit Bot</h1>
-        <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer" className="text-sm text-discord-accent hover:underline">
+        <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer" className="text-sm text-discord-accent">
           Discord Developer Portal ↗
         </a>
       </div>

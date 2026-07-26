@@ -46,7 +46,7 @@ export default function Layout() {
   };
 
   return (
-    <div className={`min-h-screen flex ${theme === "dark" ? "dark" : ""}`}>
+    <div className="min-h-screen flex">
       {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-40 w-64 bg-discord-card border-r border-discord-border flex flex-col transition-transform duration-300 ${

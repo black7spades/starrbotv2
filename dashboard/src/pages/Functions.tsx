@@ -51,7 +51,7 @@ export default function Functions() {
 
       {bots.length === 0 && (
         <div className="p-4 bg-discord-card rounded-xl border border-discord-border text-discord-muted">
-          No bots yet. <Link to="/bots/create" className="text-discord-accent hover:underline">Create one</Link> first, then deploy functions to it.
+          No bots yet. <Link to="/bots/create" className="text-discord-accent">Create one</Link> first, then deploy functions to it.
         </div>
       )}
 

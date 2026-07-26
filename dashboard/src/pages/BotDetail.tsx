@@ -68,15 +68,6 @@ export default function BotDetail() {
     onError: (err: any) => setActionError(err.message || "Failed to restart bot"),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: () => api.deleteBot(id!),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bots"] });
-      navigate("/");
-    },
-    onError: (err: any) => setActionError(err.message || "Failed to delete bot"),
-  });
-
   if (isLoading) return <div className="flex items-center justify-center h-64">Loading...</div>;
   if (error) return <div className="text-center py-12">Failed to load bot</div>;
   if (!bot) return null;
@@ -158,18 +149,6 @@ export default function BotDetail() {
               className="btn-secondary text-sm"
             >
               Edit
-            </button>
-
-            <button
-              onClick={() => {
-                if (confirm(`Delete "${bot.name}"? This cannot be undone.`)) {
-                  deleteMutation.mutate();
-                }
-              }}
-              disabled={deleteMutation.isPending}
-              className="btn-danger text-sm"
-            >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
             </button>
           </div>
         )}

@@ -28,7 +28,7 @@ export default function CreateBot() {
     <div className="max-w-lg mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Create Bot</h1>
-        <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer" className="text-sm text-discord-accent hover:underline">
+        <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer" className="text-sm text-discord-accent">
           Discord Developer Portal ↗
         </a>
       </div>
@@ -36,7 +36,7 @@ export default function CreateBot() {
       <div className="mb-6 p-4 bg-discord-card rounded-xl border border-discord-border">
         <h2 className="text-sm font-semibold mb-2">How to create a Discord bot</h2>
         <ol className="text-sm text-discord-muted space-y-1 list-decimal list-inside">
-          <li>Visit <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer" className="text-discord-accent hover:underline">Discord Developer Portal</a> and create a new application</li>
+          <li>Visit <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer" className="text-discord-accent">Discord Developer Portal</a> and create a new application</li>
           <li>Go to the <strong>Bot</strong> tab and create a bot user</li>
           <li>Copy the <strong>Token</strong> and <strong>Client ID</strong> below</li>
           <li>Enable <strong>Message Content Intent</strong> under the Bot tab</li>
