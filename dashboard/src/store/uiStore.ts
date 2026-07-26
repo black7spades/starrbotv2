@@ -1,28 +1,44 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+type Theme = "light" | "dark" | "system";
+
 interface UIState {
-  theme: "light" | "dark";
+  theme: Theme;
   sidebarOpen: boolean;
   toggleTheme: () => void;
-  setTheme: (theme: "light" | "dark") => void;
+  setTheme: (theme: Theme) => void;
   toggleSidebar: () => void;
   initTheme: () => void;
+}
+
+function getSystemTheme(): "light" | "dark" {
+  if (typeof window === "undefined") return "dark";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function applyTheme(theme: Theme) {
+  const resolved = theme === "system" ? getSystemTheme() : theme;
+  document.documentElement.classList.toggle("dark", resolved === "dark");
 }
 
 export const useUIStore = create<UIState>()(
   persist(
     (set, get) => ({
-      theme: "dark",
+      theme: "system",
       sidebarOpen: true,
 
-      toggleTheme: () => set((state) => ({ theme: state.theme === "dark" ? "light" : "dark" })),
-      setTheme: (theme) => set({ theme }),
-      toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
-      initTheme: () => {
-        const { theme } = get();
-        document.documentElement.classList.toggle("dark", theme === "dark");
+      toggleTheme: () => set((state) => {
+        const next = state.theme === "dark" ? "light" : state.theme === "light" ? "system" : "dark";
+        applyTheme(next);
+        return { theme: next };
+      }),
+      setTheme: (theme) => {
+        applyTheme(theme);
+        set({ theme });
       },
+      toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+      initTheme: () => applyTheme(get().theme),
     }),
     {
       name: "ui-storage",

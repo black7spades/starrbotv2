@@ -1,4 +1,5 @@
 import type { FunctionManifest, FunctionInstance } from "../registry/types";
+import { SlashCommandBuilder } from "discord.js";
 
 const socialsManifest: FunctionManifest = {
   name: "socials",
@@ -28,19 +29,59 @@ const socialsManifest: FunctionManifest = {
     postFormat: "{message}",
     autoPost: true,
   },
-  commands: [],
+  commands: [
+    new SlashCommandBuilder()
+      .setName("socials")
+      .setDescription("Post a message to configured social media platforms")
+      .addStringOption((opt) =>
+        opt.setName("message").setDescription("Message to post").setRequired(true)
+      )
+      .addStringOption((opt) =>
+        opt.setName("platforms").setDescription("Comma-separated platforms (twitter,bluesky,mastodon)").setRequired(false)
+      )
+      .toJSON() as any,
+  ],
   async createInstance(config: Record<string, unknown>): Promise<FunctionInstance> {
     const currentConfig = { ...config };
     return {
       name: "socials",
       config: currentConfig,
-      async onLoad(bot: any) {},
+      async onLoad(bot: any) {
+        console.log("[socials] Loaded, monitoring channel:", currentConfig.channelId);
+      },
       async onUnload() {},
       async onConfigChange(newConfig: Record<string, unknown>) {
         Object.assign(currentConfig, newConfig);
       },
+      async onMessage(message: any, bot: any, context: any) {
+        const cfg = currentConfig;
+        if (!cfg.autoPost || message.channelId !== cfg.channelId) return;
+        if (message.author?.bot) return;
+
+        const content = message.content;
+        if (!content) return;
+
+        // TODO: implement actual posting to platforms
+        console.log("[socials] Would post to:", cfg.platforms, "message:", content);
+        // await postToPlatforms(cfg.platforms, content, cfg);
+      },
+      async handleCommand(interaction: any) {
+        if (interaction.commandName !== "socials") return;
+        const message = interaction.options.getString("message", true);
+        const platformsOpt = interaction.options.getString("platforms");
+        const cfg = currentConfig;
+        const platforms = platformsOpt ? platformsOpt.split(",").map((p) => p.trim()) : cfg.platforms;
+
+        if (!platforms.length) {
+          await interaction.reply({ content: "No platforms configured. Please configure the function first.", ephemeral: true });
+          return;
+        }
+
+        // TODO: implement actual posting
+        await interaction.reply({ content: `📱 Would post to ${platforms.join(", ")}: ${message}`, ephemeral: true });
+      },
       getStats() {
-        return {};
+        return { postsSent: 0 };
       },
     };
   },

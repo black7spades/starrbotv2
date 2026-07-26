@@ -32,8 +32,8 @@ function App() {
         <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/bots/create" element={<CreateBot />} />
-          <Route path="/bots/:id" element={<BotDetail />} />
           <Route path="/bots/:botId/functions/:name" element={<FunctionConfig />} />
+          <Route path="/bots/:id" element={<BotDetail />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

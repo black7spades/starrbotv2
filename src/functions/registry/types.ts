@@ -19,6 +19,7 @@ export interface FunctionInstance {
   onLoad?(bot: any, config: Record<string, unknown>): Promise<void>;
   onUnload?(): Promise<void>;
   onConfigChange?(newConfig: Record<string, unknown>): Promise<void>;
+  onMessage?(message: any, bot: any, context: any): Promise<void>;
   getStats(): Record<string, unknown>;
   handleCommand?(interaction: any, bot: any, context: any): Promise<void>;
 }

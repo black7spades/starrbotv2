@@ -20,7 +20,7 @@ export default function Settings() {
   }, []);
 
   const handleThemeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const t = e.target.value as "light" | "dark";
+    const t = e.target.value as "light" | "dark" | "system";
     setTheme(t);
     api.updateSettings({ theme: t }).catch(() => {});
   };
@@ -76,6 +76,7 @@ export default function Settings() {
             >
               <option value="dark">Dark</option>
               <option value="light">Light</option>
+              <option value="system">System</option>
             </select>
           </div>
         </div>

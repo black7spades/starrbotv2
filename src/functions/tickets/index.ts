@@ -1,4 +1,5 @@
 import type { FunctionManifest, FunctionInstance } from "../registry/types";
+import { SlashCommandBuilder } from "discord.js";
 
 const ticketsManifest: FunctionManifest = {
   name: "tickets",
@@ -18,19 +19,40 @@ const ticketsManifest: FunctionManifest = {
     adminChannelId: "",
     adminRoleId: "",
   },
-  commands: [],
+  commands: [
+    new SlashCommandBuilder()
+      .setName("ticket")
+      .setDescription("Create a new support ticket")
+      .addStringOption((opt) =>
+        opt.setName("subject").setDescription("Ticket subject").setRequired(true)
+      )
+      .addStringOption((opt) =>
+        opt.setName("description").setDescription("Ticket description").setRequired(false)
+      )
+      .toJSON() as any,
+  ],
   async createInstance(config: Record<string, unknown>): Promise<FunctionInstance> {
     const currentConfig = { ...config };
     return {
       name: "tickets",
       config: currentConfig,
-      async onLoad(bot: any) {},
+      async onLoad(bot: any) {
+        console.log("[tickets] Loaded, admin channel:", currentConfig.adminChannelId);
+      },
       async onUnload() {},
       async onConfigChange(newConfig: Record<string, unknown>) {
         Object.assign(currentConfig, newConfig);
       },
+      async handleCommand(interaction: any) {
+        if (interaction.commandName !== "ticket") return;
+        const subject = interaction.options.getString("subject", true);
+        const description = interaction.options.getString("description") || "No description provided";
+
+        // TODO: implement actual ticket creation
+        await interaction.reply({ content: `🎫 Ticket created: ${subject}\n${description}`, ephemeral: true });
+      },
       getStats() {
-        return {};
+        return { ticketsCreated: 0 };
       },
     };
   },

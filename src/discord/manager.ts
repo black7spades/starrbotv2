@@ -131,6 +131,19 @@ function createBotInstance(botConfig: Bot): ManagedBot {
       }
     });
 
+    client.on(Events.MessageCreate, async (message) => {
+      if (message.author.bot || !message.guild) return;
+      for (const [, instance] of functions) {
+        if (instance.onMessage) {
+          try {
+            await instance.onMessage(message, emitter as ManagedBot, { bot: emitter, client, config: botConfig });
+          } catch (err: any) {
+            addLog(`Message handler error: ${err.message}`, "error");
+          }
+        }
+      }
+    });
+
     client.on(Events.Error, (err) => {
       addLog(`Client error: ${err.message}`, "error");
       stats.errors++;

@@ -106,7 +106,7 @@ export default function Layout() {
                 className="p-2 rounded-lg hover:bg-discord-input text-discord-muted hover:text-discord-text"
                 aria-label="Toggle theme"
               >
-                {theme === "dark" ? "☀️" : "🌙"}
+                {theme === "dark" ? "☀️" : theme === "light" ? "🖥️" : "🌙"}
               </button>
             </div>
           </div>
