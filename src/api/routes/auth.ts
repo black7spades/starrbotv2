@@ -46,11 +46,12 @@ export const authRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
       // Create session for the new admin
       const { accessToken, refreshToken } = createSession(user);
 
+      const accessMaxAge = 24 * 60 * 60; // 24 hours
       reply.setCookie("access_token", accessToken, {
         httpOnly: true,
         secure: request.protocol === "https",
         sameSite: "lax",
-        maxAge: 15 * 60,
+        maxAge: accessMaxAge,
         path: "/",
       });
 
@@ -89,12 +90,13 @@ export const authRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
       }
 
       const { accessToken, refreshToken } = createSession(user);
+      const accessMaxAge = 24 * 60 * 60;
 
       reply.setCookie("access_token", accessToken, {
         httpOnly: true,
         secure: request.protocol === "https",
         sameSite: "lax",
-        maxAge: 15 * 60,
+        maxAge: accessMaxAge,
         path: "/",
       });
 
@@ -134,11 +136,12 @@ export const authRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
         return reply.code(401).send({ error: "Unauthorized", message: "Invalid or expired refresh token" });
       }
 
+      const accessMaxAge = 24 * 60 * 60;
       reply.setCookie("access_token", tokens.accessToken, {
         httpOnly: true,
         secure: request.protocol === "https",
         sameSite: "lax",
-        maxAge: 15 * 60,
+        maxAge: accessMaxAge,
         path: "/",
       });
 

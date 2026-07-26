@@ -38,9 +38,7 @@ export async function createServer(): Promise<FastifyInstance> {
   });
 
   await server.register(cookie, {
-    secret: process.env.COOKIE_SECRET || "dev-cookie-secret",
     hook: "onRequest",
-    parseOptions: {},
   });
 
   await server.register(rateLimit, {
