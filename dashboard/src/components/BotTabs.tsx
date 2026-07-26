@@ -48,7 +48,7 @@ function OverviewTab({ bot }: { bot: any }) {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <StatCard label="Status" value={bot.status} icon="🟢" />
       <StatCard label="Guilds" value={bot.guildCount} icon="🏰" />
-      <StatCard label="Functions" value={bot.activeFunctions.length} icon="🔧" />
+      <StatCard label="Functions" value={bot.functions?.length || 0} icon="🔧" />
       <StatCard label="Uptime" value={bot.runtime?.uptime ? formatUptime(bot.runtime.uptime) : "N/A"} icon="⏱️" />
     </div>
   );
@@ -110,7 +110,7 @@ function LogsTab({ botId }: { botId: string }) {
   return (
     <div className="h-96 bg-discord-input rounded-xl overflow-hidden font-mono text-sm">
       <div className="p-4 text-discord-muted text-center">
-        Real-time logs via SSE - connect to /api/bots/{id}/logs
+        Real-time logs via SSE - connect to /api/bots/{botId}/logs
       </div>
     </div>
   );
