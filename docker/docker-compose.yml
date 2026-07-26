@@ -1,0 +1,73 @@
+version: "3.8"
+
+services:
+  bot:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: starrbot-v2
+    restart: unless-stopped
+    ports:
+      - "2013:2013"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - NODE_ENV=production
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - COOKIE_SECRET=${COOKIE_SECRET}
+      - LOG_LEVEL=info
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - starrbot-network
+    labels:
+      - "dockhand.enable=true"
+      - "dockhand.name=StarrBot v2"
+
+  redis:
+    image: redis:7-alpine
+    container_name: starrbot-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - starrbot-network
+
+  # Optional: RSSHub for social media feeds
+  rsshub:
+    image: diygod/rsshub:latest
+    container_name: starrbot-rsshub
+    restart: unless-stopped
+    environment:
+      - CACHE_TYPE=memory
+      - PUPPETEER_WSENDPOINT=wss://browserless:3000
+    depends_on:
+      - browserless
+    networks:
+      - starrbot-network
+    profiles:
+      - with-rsshub
+
+  browserless:
+    image: browserless/chrome:latest
+    container_name: starrbot-browserless
+    restart: unless-stopped
+    networks:
+      - starrbot-network
+    profiles:
+      - with-rsshub
+
+volumes:
+  redis-data:
+
+networks:
+  starrbot-network:
+    driver: bridge
