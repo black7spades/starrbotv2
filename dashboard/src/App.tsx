@@ -35,7 +35,7 @@ function App() {
           <Route path="/bots/create" element={<CreateBot />} />
           <Route path="/functions" element={<Functions />} />
           <Route path="/bots/:id/functions" element={<BotDetail />} />
-          <Route path="/bots/:id/functions/:name" element={<FunctionConfig />} />
+          <Route path="/bots/:botId/functions/:name" element={<FunctionConfig />} />
           <Route path="/bots/:id" element={<BotDetail />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
