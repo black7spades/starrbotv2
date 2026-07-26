@@ -154,8 +154,7 @@ function createBotInstance(botConfig: Bot): ManagedBot {
     });
   }
 
-  return {
-    ...emitter,
+  const result = {
     config: botConfig,
     client,
     status,
@@ -268,6 +267,9 @@ function createBotInstance(botConfig: Bot): ManagedBot {
 
     addLog,
   } as ManagedBot;
+
+  Object.setPrototypeOf(result, Object.getPrototypeOf(emitter));
+  return result;
 }
 
 class BotManagerClass extends EventEmitter {
