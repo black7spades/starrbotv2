@@ -36,6 +36,7 @@ export interface ManagedBot extends EventEmitter {
   getStats(): BotStats;
   getLogs(): LogEntry[];
   get guildCount(): number;
+  get guilds(): { id: string; name: string; memberCount: number; icon: string | null }[];
   addLog(message: string, level: LogEntry["level"]): void;
 }
 
@@ -157,10 +158,10 @@ function createBotInstance(botConfig: Bot): ManagedBot {
   const result = {
     config: botConfig,
     client,
-    status,
-    error,
+    get status() { return status; },
+    get error() { return error; },
     functions,
-    startTime: null,
+    get startTime() { return startTime; },
     stats,
     logs,
 
@@ -263,6 +264,15 @@ function createBotInstance(botConfig: Bot): ManagedBot {
 
     get guildCount() {
       return client.guilds.cache.size;
+    },
+
+    get guilds() {
+      return Array.from(client.guilds.cache.values()).map((g) => ({
+        id: g.id,
+        name: g.name,
+        memberCount: g.memberCount,
+        icon: g.iconURL(),
+      }));
     },
 
     addLog,

@@ -54,5 +54,6 @@ export interface ManagedBot extends EventEmitter {
   getStats(): BotStats;
   getLogs(): LogEntry[];
   get guildCount(): number;
+  get guilds(): { id: string; name: string; memberCount: number; icon: string | null }[];
   addLog(message: string, level: LogEntry["level"]): void;
 }

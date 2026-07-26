@@ -32,21 +32,24 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
 
       const functions = configStore.getBotFunctions(bot.id);
       const managed = botManager.getBot(bot.id);
+      const liveStats = managed?.getStats();
 
       return {
         ...bot,
         status: managed?.status || "stopped",
         error: managed?.error || null,
         guildCount: managed?.guildCount || 0,
-        runtime: managed
+        guilds: managed?.guilds || [],
+        runtime: liveStats
           ? {
-              uptime: managed.stats?.uptime || null,
-              lastCheck: managed.stats?.lastCheck || null,
-              postsSent: managed.stats?.postsSent || 0,
-              errors: managed.stats?.errors || 0,
-              functions: managed.stats?.functions || [],
+              uptime: liveStats.uptime,
+              lastCheck: liveStats.lastCheck,
+              postsSent: liveStats.postsSent,
+              errors: liveStats.errors,
+              functions: liveStats.functions,
             }
           : null,
+        logs: managed?.getLogs() || [],
         functions: functions.map((f) => ({
           functionName: f.functionName,
           config: f.config,
