@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 
 export default function EditBot() {
@@ -19,6 +19,18 @@ export default function EditBot() {
   const [clientId, setClientId] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteNameInput, setDeleteNameInput] = useState("");
+
+  const deleteMutation = useMutation({
+    mutationFn: () => api.deleteBot(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bots"] });
+      navigate("/");
+    },
+    onError: (err: any) => setError(err.message || "Failed to delete bot"),
+  });
 
   useEffect(() => {
     if (bot) {
@@ -49,9 +61,11 @@ export default function EditBot() {
   if (isLoading) return <div className="flex items-center justify-center h-64">Loading...</div>;
   if (!bot) return <div className="text-center py-12">Bot not found</div>;
 
+  const deleteEnabled = deleteNameInput === bot.name;
+
   return (
-    <div className="max-w-lg mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="max-w-lg mx-auto space-y-6">
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Edit Bot</h1>
         <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer" className="text-sm text-discord-accent">
           Discord Developer Portal ↗
@@ -83,6 +97,48 @@ export default function EditBot() {
           <button type="button" onClick={() => navigate(-1)} className="btn-secondary">Cancel</button>
         </div>
       </form>
+
+      {/* Danger Zone */}
+      <div className="p-6 bg-discord-card rounded-xl border border-discord-red/30 space-y-4">
+        <h2 className="text-lg font-semibold text-discord-red">Danger Zone</h2>
+
+        {!showDeleteConfirm ? (
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="px-4 py-2 text-sm font-medium rounded-lg bg-discord-red/10 text-discord-red hover:bg-discord-red/20 transition-colors"
+          >
+            Delete Bot
+          </button>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-discord-muted">
+              This action is <span className="text-discord-red font-medium">permanent</span> and cannot be undone. Type <span className="font-mono text-discord-text">{bot.name}</span> to confirm.
+            </p>
+            <input
+              value={deleteNameInput}
+              onChange={(e) => setDeleteNameInput(e.target.value)}
+              placeholder={`Type "${bot.name}" to confirm`}
+              className="w-full px-3 py-2 bg-discord-input border border-discord-red/30 rounded-lg text-discord-text focus:ring-2 focus:ring-discord-red"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => deleteMutation.mutate()}
+                disabled={!deleteEnabled || deleteMutation.isPending}
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-discord-red text-white hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                {deleteMutation.isPending ? "Deleting..." : "Permanently Delete"}
+              </button>
+              <button
+                onClick={() => { setShowDeleteConfirm(false); setDeleteNameInput(""); }}
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-discord-input text-discord-text hover:bg-discord-border transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
