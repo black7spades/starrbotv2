@@ -37,7 +37,7 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
         ...bot,
         status: managed?.status || "stopped",
         error: managed?.error || null,
-        guildCount: managed?.stats?.guildCount || 0,
+        guildCount: managed?.guildCount || 0,
         runtime: managed
           ? {
               uptime: managed.stats?.uptime || null,
