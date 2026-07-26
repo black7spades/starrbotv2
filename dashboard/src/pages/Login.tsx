@@ -1,28 +1,70 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { useUIStore } from "../store/uiStore";
+import { api } from "../api/client";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, loading } = useAuthStore();
+  const { login } = useAuthStore();
   const { theme } = useUIStore();
   const [error, setError] = useState("");
+  const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    defaultValues: { username: "", password: "" },
+  const { register, handleSubmit, formState: { errors }, watch } = useForm({
+    defaultValues: { username: "", password: "", confirmPassword: "" },
   });
 
-  const onSubmit = async (data: { username: string; password: string }) => {
+  useEffect(() => {
+    api.request<{ needsSetup: boolean }>("/api/auth/setup/status").then(r => setNeedsSetup(r.needsSetup)).catch(() => setNeedsSetup(true));
+  }, []);
+
+  const onSubmit = async (data: { username: string; password: string; confirmPassword?: string }) => {
     setError("");
+    setSubmitting(true);
     try {
+      if (needsSetup) {
+        await api.request("/api/auth/setup", { method: "POST", body: JSON.stringify({ username: data.username, password: data.password }) });
+      }
       await login(data.username, data.password);
       navigate("/");
     } catch (err: any) {
-      setError(err.message || "Login failed");
+      setError(err.message || "Failed");
+    } finally {
+      setSubmitting(false);
     }
   };
+
+  const passwordField = (
+    <div>
+      <label htmlFor="password" className="block text-sm font-medium mb-1">Password</label>
+      <div className="relative">
+        <input
+          {...register("password", { required: "Password is required", minLength: { value: 8, message: "Min 8 characters" } })}
+          id="password"
+          type={showPassword ? "text" : "password"}
+          autoComplete={needsSetup ? "new-password" : "current-password"}
+          className="w-full px-4 py-3 pr-12 rounded-lg bg-discord-input border border-discord-border text-discord-text placeholder-discord-muted focus:outline-none focus:ring-2 focus:ring-discord-accent focus:border-transparent"
+          disabled={submitting}
+        />
+        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-discord-muted hover:text-discord-text text-sm">
+          {showPassword ? "Hide" : "Show"}
+        </button>
+      </div>
+      {errors.password && <p className="mt-1 text-sm text-discord-red">{errors.password.message}</p>}
+    </div>
+  );
+
+  if (needsSetup === null) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center p-4 ${theme === "dark" ? "dark" : ""}`}>
+        <div className="text-discord-muted">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen flex items-center justify-center p-4 ${theme === "dark" ? "dark" : ""}`}>
@@ -33,7 +75,7 @@ export default function Login() {
               🤖
             </div>
             <h1 className="text-2xl font-bold">StarrBot</h1>
-            <p className="text-discord-muted mt-1">Fleet Management Dashboard</p>
+            <p className="text-discord-muted mt-1">{needsSetup ? "Create Admin Account" : "Fleet Management Dashboard"}</p>
           </div>
 
           {error && (
@@ -46,45 +88,47 @@ export default function Login() {
             <div>
               <label htmlFor="username" className="block text-sm font-medium mb-1">Username</label>
               <input
-                {...register("username", { required: "Username is required" })}
+                {...register("username", { required: "Username is required", minLength: { value: 3, message: "Min 3 characters" } })}
                 id="username"
                 type="text"
                 autoComplete="username"
                 className="w-full px-4 py-3 rounded-lg bg-discord-input border border-discord-border text-discord-text placeholder-discord-muted focus:outline-none focus:ring-2 focus:ring-discord-accent focus:border-transparent"
-                disabled={loading}
+                disabled={submitting}
               />
-              {errors.username && (
-                <p className="mt-1 text-sm text-discord-red">{errors.username.message}</p>
-              )}
+              {errors.username && <p className="mt-1 text-sm text-discord-red">{errors.username.message}</p>}
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-1">Password</label>
-              <input
-                {...register("password", { required: "Password is required" })}
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                className="w-full px-4 py-3 rounded-lg bg-discord-input border border-discord-border text-discord-text placeholder-discord-muted focus:outline-none focus:ring-2 focus:ring-discord-accent focus:border-transparent"
-                disabled={loading}
-              />
-              {errors.password && (
-                <p className="mt-1 text-sm text-discord-red">{errors.password.message}</p>
-              )}
-            </div>
+            {passwordField}
+
+            {needsSetup && (
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1">Confirm Password</label>
+                <input
+                  {...register("confirmPassword", {
+                    required: "Confirm your password",
+                    validate: (val: string) => {
+                      const pw = watch("password");
+                      return val === pw || "Passwords do not match";
+                    },
+                  })}
+                  id="confirmPassword"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  className="w-full px-4 py-3 rounded-lg bg-discord-input border border-discord-border text-discord-text placeholder-discord-muted focus:outline-none focus:ring-2 focus:ring-discord-accent focus:border-transparent"
+                  disabled={submitting}
+                />
+                {errors.confirmPassword && <p className="mt-1 text-sm text-discord-red">{errors.confirmPassword.message}</p>}
+              </div>
+            )}
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={submitting}
               className="w-full py-3 px-4 rounded-lg bg-discord-accent text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              {loading ? "Signing in..." : "Sign in"}
+              {submitting ? "Please wait..." : needsSetup ? "Create Admin & Sign In" : "Sign in"}
             </button>
           </form>
-
-          <p className="mt-6 text-center text-xs text-discord-muted">
-            Default: <code className="bg-discord-input px-1 rounded">admin</code> / <code className="bg-discord-input px-1 rounded">admin123</code>
-          </p>
         </div>
       </div>
     </div>
