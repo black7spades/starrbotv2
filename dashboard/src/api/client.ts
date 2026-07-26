@@ -134,6 +134,11 @@ class ApiClient {
   updateSettings(data: any) {
     return this.patch("/api/settings", data);
   }
+
+  // Version
+  getVersion() {
+    return this.get<{ version: string; buildTime: string; nodeEnv: string }>("/api/version");
+  }
 }
 
 export const api = new ApiClient(API_BASE);

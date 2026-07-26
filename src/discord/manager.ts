@@ -85,7 +85,7 @@ function createBotInstance(botConfig: Bot): ManagedBot {
 
     if (commands.length === 0) return;
 
-    const guildId = process.env.GUILD_ID;
+    const guildId = process.env.GUILD_ID || client.guilds.cache.first()?.id;
 
     try {
       if (guildId) {

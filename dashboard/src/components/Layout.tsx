@@ -16,6 +16,12 @@ export default function Layout() {
   });
   const bots = botsData?.bots || [];
 
+  const { data: version } = useQuery({
+    queryKey: ["version"],
+    queryFn: () => api.getVersion(),
+    refetchInterval: 60000,
+  });
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -99,7 +105,7 @@ export default function Layout() {
           </div>
         </div>
 
-        {/* Bottom: theme + settings */}
+        {/* Bottom: settings + theme + version */}
         <div className="border-t border-discord-border shrink-0">
           <nav className="p-2 space-y-0.5">
             <NavLink
@@ -123,6 +129,11 @@ export default function Layout() {
               <span className="capitalize">{theme} mode</span>
             </button>
           </nav>
+          <div className="px-4 pb-2 pt-1 border-t border-discord-border">
+            <p className="text-[10px] text-discord-muted/50 font-mono">
+              {version?.version ? `v${version.version}` : "loading..."}
+            </p>
+          </div>
         </div>
       </aside>
 

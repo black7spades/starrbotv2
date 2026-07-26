@@ -1,20 +1,33 @@
+import { execSync } from "child_process";
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 import { configStore } from "config/index";
 import { botManager } from "discord/manager";
 import { register } from "utils/metrics";
+
+let gitHash = "unknown";
+try {
+  gitHash = execSync("git rev-parse --short HEAD", { timeout: 3000 }).toString().trim();
+} catch {}
+
+let buildTime = new Date().toISOString();
 
 export const healthRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   fastify.get("/health/live", async () => ({ status: "ok" }));
 
   fastify.get("/health/ready", async () => {
     const dbOk = !!configStore;
-    const redisOk = await botManager.checkRedisConnection();
-
+    const redisOk = botManager.checkRedisConnection();
     if (!dbOk || !redisOk) {
       return { status: "degraded", db: dbOk, redis: redisOk };
     }
     return { status: "ready", db: dbOk, redis: redisOk };
   });
+
+  fastify.get("/version", async () => ({
+    version: gitHash,
+    buildTime,
+    nodeEnv: process.env.NODE_ENV || "development",
+  }));
 
   fastify.get("/metrics", async (_, reply) => {
     const metrics = await register.metrics();
