@@ -1,8 +1,6 @@
 services:
   bot:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
+    image: ghcr.io/black7spades/starrbotv2:latest
     container_name: starrbot-v2
     restart: unless-stopped
     ports:
