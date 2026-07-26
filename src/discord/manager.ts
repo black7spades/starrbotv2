@@ -90,13 +90,20 @@ function createBotInstance(botConfig: Bot): ManagedBot {
       }
     }
 
-    if (commands.length > 0) {
-      try {
+    if (commands.length === 0) return;
+
+    const guildId = process.env.GUILD_ID;
+
+    try {
+      if (guildId) {
+        await rest.put(Routes.applicationGuildCommands(botConfig.clientId, guildId), { body: commands });
+        addLog(`Registered ${commands.length} slash commands (guild ${guildId})`);
+      } else {
         await rest.put(Routes.applicationCommands(botConfig.clientId), { body: commands });
-        addLog(`Registered ${commands.length} slash commands`);
-      } catch (err: any) {
-        addLog(`Failed to register commands: ${err.message}`, "error");
+        addLog(`Registered ${commands.length} slash commands (global — may take up to 1 hour to propagate)`);
       }
+    } catch (err: any) {
+      addLog(`Failed to register commands: ${err.message}`, "error");
     }
   }
 
@@ -176,7 +183,7 @@ function createBotInstance(botConfig: Bot): ManagedBot {
           const manifest = functionRegistry.getManifest(bf.functionName);
           if (manifest) {
             try {
-              const instance = await manifest.createInstance(bf.config);
+              const instance = await manifest.createInstance({ ...bf.config, botId: bf.botId });
               instance.manifest = manifest;
               functions.set(bf.functionName, instance);
               await instance.onLoad?.(emitter as ManagedBot, bf.config);
@@ -237,7 +244,7 @@ function createBotInstance(botConfig: Bot): ManagedBot {
         const manifest = functionRegistry.getManifest(name);
         if (manifest) {
           try {
-            const instance = await manifest.createInstance(bf.config);
+            const instance = await manifest.createInstance({ ...bf.config, botId: bf.botId });
             instance.manifest = manifest;
             functions.set(name, instance);
             await instance.onLoad?.(emitter as ManagedBot, bf.config);

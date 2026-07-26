@@ -1,5 +1,11 @@
 import type { FunctionManifest, FunctionInstance } from "../registry/types";
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
+import { configStore } from "config/index";
+
+interface RssSource {
+  url: string;
+  label: string;
+}
 
 const updatesManifest: FunctionManifest = {
   name: "updates",
@@ -18,7 +24,7 @@ const updatesManifest: FunctionManifest = {
         items: {
           type: "object",
           properties: {
-            url: { type: "string", format: "uri" },
+            url: { type: "string" },
             label: { type: "string" },
           },
           required: ["url"],
@@ -31,7 +37,7 @@ const updatesManifest: FunctionManifest = {
     rsshubUrl: "http://rsshub:12000",
     checkInterval: 15,
     channelId: "",
-    sources: [],
+    sources: [] as RssSource[],
   },
   commands: [
     new SlashCommandBuilder()
@@ -58,47 +64,167 @@ const updatesManifest: FunctionManifest = {
   ],
   async createInstance(config: Record<string, unknown>): Promise<FunctionInstance> {
     const currentConfig = { ...config };
+    const botId = config.botId as string;
+    let checkInterval: ReturnType<typeof setInterval> | null = null;
+    let sourcesChecked = 0;
+
+    function getSources(): RssSource[] {
+      return (currentConfig.sources as RssSource[]) || [];
+    }
+
+    function persistSources(sources: RssSource[]): void {
+      currentConfig.sources = sources;
+      if (botId) {
+        configStore.upsertBotFunction(botId, "updates", {
+          config: { ...currentConfig },
+        });
+      }
+    }
+
+    async function fetchFeed(url: string): Promise<{ title: string; link: string; description?: string }[]> {
+      const rsshubBase = (currentConfig.rsshubUrl as string) || "http://rsshub:12000";
+      const feedUrl = `${rsshubBase}/${url.replace(/^https?:\/\//, "")}`;
+
+      try {
+        const res = await fetch(feedUrl, { signal: AbortSignal.timeout(10000) });
+        if (!res.ok) return [];
+        const text = await res.text();
+
+        const items: { title: string; link: string; description?: string }[] = [];
+        const itemMatches = text.matchAll(/<item>([\s\S]*?)<\/item>/gi);
+        for (const match of itemMatches) {
+          const block = match[1];
+          const title = block.match(/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>/i)?.[1]
+            || block.match(/<title>([\s\S]*?)<\/title>/i)?.[1]
+            || "Untitled";
+          const link = block.match(/<link>([\s\S]*?)<\/link>/i)?.[1] || "";
+          const description = block.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/i)?.[1]
+            || block.match(/<description>([\s\S]*?)<\/description>/i)?.[1]
+            || "";
+          if (link) items.push({ title: title.trim(), link: link.trim(), description: description.trim().slice(0, 500) });
+        }
+        return items;
+      } catch {
+        return [];
+      }
+    }
+
+    async function checkFeeds(interaction?: any): Promise<void> {
+      const sources = getSources();
+      if (!sources.length) {
+        if (interaction) await interaction.editReply({ content: "No RSS sources configured. Use `/updates add` to add one." });
+        return;
+      }
+
+      const channelId = currentConfig.channelId as string;
+      if (!channelId) {
+        if (interaction) await interaction.editReply({ content: "No channel configured. Please set a channel in the function settings." });
+        return;
+      }
+
+      if (interaction) {
+        await interaction.editReply({ content: `🔄 Checking ${sources.length} feed(s)...` });
+      }
+
+      let newItems = 0;
+
+      for (const source of sources) {
+        const items = await fetchFeed(source.url);
+        for (const item of items) {
+          if (configStore.hasPostedUrl(botId, item.link)) continue;
+
+          try {
+            const channel = await interaction?.client?.channels?.fetch(channelId);
+            if (!channel || !("send" in channel)) continue;
+
+            const embed = new EmbedBuilder()
+              .setTitle(item.title)
+              .setURL(item.link)
+              .setDescription(item.description || "")
+              .setColor(0x57f287)
+              .setFooter({ text: source.label })
+              .setTimestamp();
+
+            await channel.send({ embeds: [embed] });
+            configStore.addPostedUrl(botId, item.link);
+            newItems++;
+          } catch {
+            // skip failed sends
+          }
+        }
+        sourcesChecked++;
+      }
+
+      if (interaction) {
+        await interaction.editReply({
+          content: newItems > 0
+            ? `✅ Found ${newItems} new update(s) across ${sources.length} feed(s).`
+            : `✅ Checked ${sources.length} feed(s). No new updates.`,
+        });
+      }
+    }
+
     return {
       name: "updates",
       config: currentConfig,
       async onLoad(bot: any) {
         console.log("[updates] Loaded, monitoring channel:", currentConfig.channelId);
+        const interval = (currentConfig.checkInterval as number) || 15;
+        checkInterval = setInterval(() => checkFeeds(), interval * 60 * 1000);
       },
-      async onUnload() {},
+      async onUnload() {
+        if (checkInterval) {
+          clearInterval(checkInterval);
+          checkInterval = null;
+        }
+      },
       async onConfigChange(newConfig: Record<string, unknown>) {
         Object.assign(currentConfig, newConfig);
+        if (checkInterval) {
+          clearInterval(checkInterval);
+          const interval = (currentConfig.checkInterval as number) || 15;
+          checkInterval = setInterval(() => checkFeeds(), interval * 60 * 1000);
+        }
       },
       async handleCommand(interaction: any) {
         if (interaction.commandName !== "updates") return;
         const sub = interaction.options.getSubcommand();
 
         if (sub === "check") {
-          await interaction.reply({ content: "🔄 Checking for updates...", ephemeral: true });
-          // TODO: implement actual check
+          await interaction.deferReply({ ephemeral: true });
+          await checkFeeds(interaction);
         } else if (sub === "add") {
           const url = interaction.options.getString("url", true);
           const label = interaction.options.getString("label") || url;
-          const sources = (currentConfig.sources as any[]) || [];
+          const sources = getSources();
+          if (sources.some((s) => s.url === url)) {
+            await interaction.reply({ content: `⚠️ Source already exists: ${url}`, ephemeral: true });
+            return;
+          }
           sources.push({ url, label });
-          currentConfig.sources = sources;
+          persistSources(sources);
           await interaction.reply({ content: `✅ Added source: ${label} (${url})`, ephemeral: true });
         } else if (sub === "remove") {
           const url = interaction.options.getString("url", true);
-          const sources = ((currentConfig.sources as any[]) || []).filter((s) => s.url !== url);
-          currentConfig.sources = sources;
+          const sources = getSources().filter((s) => s.url !== url);
+          if (sources.length === getSources().length) {
+            await interaction.reply({ content: `⚠️ Source not found: ${url}`, ephemeral: true });
+            return;
+          }
+          persistSources(sources);
           await interaction.reply({ content: `✅ Removed source: ${url}`, ephemeral: true });
         } else if (sub === "list") {
-          const sources = (currentConfig.sources as any[]) || [];
+          const sources = getSources();
           if (!sources.length) {
             await interaction.reply({ content: "No sources configured.", ephemeral: true });
             return;
           }
-          const list = sources.map((s, i) => `${i + 1}. ${s.label} - ${s.url}`).join("\n");
-          await interaction.reply({ content: `📋 Sources:\n${list}`, ephemeral: true });
+          const list = sources.map((s, i) => `${i + 1}. **${s.label}** — ${s.url}`).join("\n");
+          await interaction.reply({ content: `📋 **Sources:**\n${list}`, ephemeral: true });
         }
       },
       getStats() {
-        return { sources: ((currentConfig.sources as any[]) || []).length };
+        return { sources: getSources().length, sourcesChecked };
       },
     };
   },

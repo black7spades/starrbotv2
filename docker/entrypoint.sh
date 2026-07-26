@@ -7,9 +7,9 @@ set -e
 chown -R nodejs:nodejs /app/data
 
 # Generate secrets if not provided
-if [ -z "$JWT_SECRET" ]; then
-    export JWT_SECRET=$(openssl rand -hex 32)
-    echo "Generated JWT_SECRET"
+if [ -z "$JWT_ACCESS_SECRET" ]; then
+    export JWT_ACCESS_SECRET=$(openssl rand -hex 32)
+    echo "Generated JWT_ACCESS_SECRET"
 fi
 
 if [ -z "$JWT_REFRESH_SECRET" ]; then
