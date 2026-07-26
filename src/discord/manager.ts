@@ -249,6 +249,7 @@ function createBotInstance(botConfig: Bot): ManagedBot {
       }
 
       stats.functions = Array.from(functions.keys());
+      await registerCommands();
     },
 
     getStats() {
