@@ -77,9 +77,17 @@ function createBotInstance(botConfig: Bot): ManagedBot {
       } as any,
     ];
 
+    const seen = new Set<string>();
+    seen.add("help");
+
     for (const [, instance] of functions) {
       if (instance.manifest?.commands) {
-        commands.push(...instance.manifest.commands);
+        for (const cmd of instance.manifest.commands) {
+          if (!seen.has(cmd.name)) {
+            seen.add(cmd.name);
+            commands.push(cmd);
+          }
+        }
       }
     }
 
@@ -91,6 +99,13 @@ function createBotInstance(botConfig: Bot): ManagedBot {
       if (guildId) {
         await rest.put(Routes.applicationGuildCommands(botConfig.clientId, guildId), { body: commands });
         log("info", `Registered ${commands.length} slash commands (guild ${guildId})`);
+        try {
+          const globalCmds = await rest.get(Routes.applicationCommands(botConfig.clientId)) as any[];
+          if (globalCmds && globalCmds.length > 0) {
+            await rest.put(Routes.applicationCommands(botConfig.clientId), { body: [] });
+            log("info", `Cleared ${globalCmds.length} stale global commands`);
+          }
+        } catch {}
       } else {
         await rest.put(Routes.applicationCommands(botConfig.clientId), { body: commands });
         log("info", `Registered ${commands.length} slash commands (global — may take up to 1 hour to propagate)`);
