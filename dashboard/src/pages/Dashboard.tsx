@@ -1,9 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { api } from "../api/client";
-import { useAuthStore } from "../store/authStore";
-import { useUIStore } from "../store/uiStore";
-import { BotTabs } from "../components/BotTabs";
 
 function DashboardContent() {
   const { data: botsData } = useQuery({
@@ -108,58 +105,5 @@ function BotCard({ bot }: { bot: any }) {
 }
 
 export default function Dashboard() {
-  const { user } = useAuthStore();
-  const { sidebarOpen, toggleSidebar } = useUIStore();
-
-  if (!user) return null;
-
-  return (
-    <div className="min-h-screen flex">
-      <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-discord-card border-r border-discord-border transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <div className="p-4 border-b border-discord-border">
-          <h1 className="font-bold text-lg">StarrBot</h1>
-        </div>
-        <nav className="p-4 space-y-2">
-          <NavLink
-            to="/"
-            className={({ isActive }) => `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive ? "bg-discord-accent/20 text-discord-accent" : "text-discord-muted hover:text-discord-text hover:bg-discord-input"}`}
-          >
-            📊 Dashboard
-          </NavLink>
-          <NavLink
-            to="/settings"
-            className={({ isActive }) => `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive ? "bg-discord-accent/20 text-discord-accent" : "text-discord-muted hover:text-discord-text hover:bg-discord-input"}`}
-          >
-            ⚙️ Settings
-          </NavLink>
-        </nav>
-      </aside>
-
-      <div className={`flex-1 transition-margin ${sidebarOpen ? "ml-64" : "ml-0"}`}>
-        <header className="sticky top-0 z-30 bg-discord-bg/80 backdrop-blur-sm border-b border-discord-border">
-          <div className="flex items-center justify-between h-16 px-4 lg:px-6">
-            <button onClick={toggleSidebar} className="lg:hidden p-2 rounded-lg hover:bg-discord-input">
-              ☰
-            </button>
-            <div className="flex-1 lg:flex-none" />
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-discord-muted hidden sm:block">
-                {user.username} ({user.role})
-              </span>
-              <button
-                onClick={() => useAuthStore.getState().logout()}
-                className="p-2 rounded-lg hover:bg-discord-input transition-colors"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <main className="p-4 lg:p-6">
-          <DashboardContent />
-        </main>
-      </div>
-    </div>
-  );
+  return <DashboardContent />;
 }
