@@ -20,6 +20,7 @@ export default function FunctionConfig() {
   const [currentConfig, setCurrentConfig] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isConfigured, setIsConfigured] = useState(false);
 
   const {
     register,
@@ -49,6 +50,7 @@ export default function FunctionConfig() {
         const configData = await api.getBotFunction(botId!, name!);
         setCurrentConfig(configData.config || {});
         setValue("enabled", configData.enabled ?? false);
+        setIsConfigured(true);
         if (configData.config) {
           Object.entries(configData.config).forEach(([key, value]) => {
             setValue(`config.${key}`, value as any);
@@ -109,21 +111,6 @@ export default function FunctionConfig() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Enable Toggle */}
-        <div className="p-4 bg-discord-card rounded-xl border border-discord-border">
-          <label className="flex items-center justify-between cursor-pointer">
-            <div>
-              <h3 className="font-semibold">Enable {manifest.label}</h3>
-              <p className="text-sm text-discord-muted">Toggle this function on/off for this bot</p>
-            </div>
-            <input
-              type="checkbox"
-              {...register("enabled")}
-              className="w-5 h-5 rounded border-discord-border text-discord-accent focus:ring-discord-accent"
-            />
-          </label>
-        </div>
-
         {/* Config Fields */}
         {Object.keys(configFields).length > 0 && (
           <div className="space-y-4">
@@ -137,7 +124,7 @@ export default function FunctionConfig() {
                 value={currentConfig[key]}
                 register={register}
                 errors={errors}
-                disabled={!watch("enabled")}
+                disabled={false}
               />
             ))}
           </div>
@@ -148,6 +135,26 @@ export default function FunctionConfig() {
             This function has no configuration options.
           </div>
         )}
+
+        {/* Enable Toggle */}
+        <div className={`p-4 bg-discord-card rounded-xl border border-discord-border ${!isConfigured ? "opacity-50" : ""}`}>
+          <label className={`flex items-center justify-between ${isConfigured ? "cursor-pointer" : "cursor-not-allowed"}`}>
+            <div>
+              <h3 className="font-semibold">Enable {manifest.label}</h3>
+              <p className="text-sm text-discord-muted">
+                {isConfigured
+                  ? "Toggle this function on/off for this bot"
+                  : "Save configuration first to enable this function"}
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              {...register("enabled")}
+              disabled={!isConfigured}
+              className="w-5 h-5 rounded border-discord-border text-discord-accent focus:ring-discord-accent disabled:cursor-not-allowed"
+            />
+          </label>
+        </div>
 
         {/* Actions */}
         <div className="flex justify-end gap-3 pt-4 border-t border-discord-border">
