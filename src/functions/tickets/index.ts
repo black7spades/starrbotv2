@@ -6,8 +6,30 @@ import {
   PermissionFlagsBits,
 } from "discord.js";
 import { configStore } from "config/store";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
+import { join } from "path";
 
-let ticketCounter = 0;
+const DATA_DIR = join(__dirname, "../../../data");
+const COUNTER_FILE = join(DATA_DIR, "ticket-counter.json");
+
+function loadTicketCounter(): number {
+  try {
+    if (existsSync(COUNTER_FILE)) {
+      const data = JSON.parse(readFileSync(COUNTER_FILE, "utf8"));
+      return data.counter || 0;
+    }
+  } catch {}
+  return 0;
+}
+
+function saveTicketCounter(counter: number): void {
+  try {
+    if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
+    writeFileSync(COUNTER_FILE, JSON.stringify({ counter }));
+  } catch {}
+}
+
+let ticketCounter = loadTicketCounter();
 
 const ticketsManifest: FunctionManifest = {
   name: "tickets",
@@ -57,7 +79,7 @@ const ticketsManifest: FunctionManifest = {
           "1️⃣ — Unsatisfied\n" +
           "2️⃣ — Not happy\n" +
           "3️⃣ — Okay\n" +
-           "4️⃣ — Satisfied\n" +
+          "4️⃣ — Satisfied\n" +
           "5️⃣ — Overjoyed",
         )
         .setColor(0xfee75c)
@@ -168,6 +190,7 @@ const ticketsManifest: FunctionManifest = {
           }
 
           ticketCounter++;
+          saveTicketCounter(ticketCounter);
           const ticketId = `TICKET-${String(ticketCounter).padStart(4, "0")}`;
 
           const embed = new EmbedBuilder()
