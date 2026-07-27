@@ -78,6 +78,7 @@ export default function BotTable({ bots }: { bots: BotRow[] }) {
           type="checkbox"
           checked={row.getIsSelected()}
           onChange={row.getToggleSelectedHandler()}
+          onClick={(e) => e.stopPropagation()}
           className="w-4 h-4 rounded border-discord-border text-discord-accent focus:ring-discord-accent"
         />
       ),
