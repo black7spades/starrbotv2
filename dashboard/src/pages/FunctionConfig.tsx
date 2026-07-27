@@ -21,6 +21,7 @@ export default function FunctionConfig() {
   const [currentConfig, setCurrentConfig] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [isConfigured, setIsConfigured] = useState(false);
 
   const {
@@ -73,12 +74,18 @@ export default function FunctionConfig() {
     }
   };
 
-  const onSubmit = async (data: FunctionConfigForm) => {
+  const doSave = async (data: FunctionConfigForm, close: boolean) => {
     if (!botId || !name) return;
     setSaving(true);
     try {
       await api.updateFunctionConfig(botId, name, data);
-      navigate(-1);
+      setIsConfigured(true);
+      if (close) {
+        navigate(-1);
+      } else {
+        setSaveMsg("Saved!");
+        setTimeout(() => setSaveMsg(null), 2000);
+      }
     } catch (err: any) {
       alert(err.message || "Failed to save");
     } finally {
@@ -109,7 +116,7 @@ export default function FunctionConfig() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit((data) => doSave(data, false))} className="space-y-6">
         {Object.keys(configFields).length > 0 && (
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">Configuration</h2>
@@ -175,8 +182,19 @@ export default function FunctionConfig() {
           >
             Cancel
           </button>
-          <button type="submit" disabled={saving} className="btn-primary">
-            {saving ? "Saving..." : "Save Configuration"}
+          {saveMsg && (
+            <span className="self-center text-sm text-discord-green">{saveMsg}</span>
+          )}
+          <button type="submit" disabled={saving} className="btn-secondary">
+            {saving ? "Saving..." : "Save"}
+          </button>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={handleSubmit((data) => doSave(data, true))}
+            className="btn-primary"
+          >
+            {saving ? "Saving..." : "Save & Close"}
           </button>
         </div>
       </form>
@@ -197,11 +215,15 @@ function SourcesField({
 }) {
   const sources: any[] = Array.isArray(value) ? value : [];
   const itemFields = field.items?.properties || {};
+  const [bulkText, setBulkText] = useState("");
 
-  const addSource = () => {
+  const addSource = (url?: string, label?: string) => {
     const newItem: any = {};
     Object.entries(itemFields).forEach(([key, def]: [string, any]) => {
-      newItem[key] = def.default ?? (def.type === "boolean" ? true : "");
+      if (key === "url") newItem[key] = url ?? "";
+      else if (key === "label") newItem[key] = label ?? (url ? deriveLabel(url) : "");
+      else if (key === "enabled") newItem[key] = true;
+      else newItem[key] = def.default ?? "";
     });
     onChange([...sources, newItem]);
   };
@@ -215,6 +237,23 @@ function SourcesField({
     onChange(updated);
   };
 
+  const addBulk = () => {
+    const lines = bulkText.split("\n").map((l) => l.trim()).filter(Boolean);
+    if (!lines.length) return;
+    const newSources = lines.map((url) => {
+      const item: any = {};
+      Object.entries(itemFields).forEach(([key, def]: [string, any]) => {
+        if (key === "url") item[key] = url;
+        else if (key === "label") item[key] = deriveLabel(url);
+        else if (key === "enabled") item[key] = true;
+        else item[key] = def.default ?? "";
+      });
+      return item;
+    });
+    onChange([...sources, ...newSources]);
+    setBulkText("");
+  };
+
   return (
     <div className="p-4 bg-discord-card rounded-xl border border-discord-border space-y-4">
       <div className="flex items-center justify-between">
@@ -222,14 +261,32 @@ function SourcesField({
           <h4 className="font-medium">{field.title || name}</h4>
           {field.description && <p className="text-sm text-discord-muted">{field.description}</p>}
         </div>
-        <button type="button" onClick={addSource} className="btn-primary text-sm">
+        <button type="button" onClick={() => addSource()} className="btn-primary text-sm">
           + Add
+        </button>
+      </div>
+
+      <div className="flex gap-2">
+        <textarea
+          value={bulkText}
+          onChange={(e) => setBulkText(e.target.value)}
+          placeholder={"Bulk paste — one URL per line:\nhttps://rsshub.servalan.one/twitch/user/mkitty\nhttps://rsshub.servalan.one/twitter/user/Mazland"}
+          rows={3}
+          className="flex-1 px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text text-sm font-mono focus:ring-2 focus:ring-discord-accent focus:border-transparent resize-none"
+        />
+        <button
+          type="button"
+          onClick={addBulk}
+          disabled={!bulkText.trim()}
+          className="btn-primary text-sm self-end"
+        >
+          Add All
         </button>
       </div>
 
       {sources.length === 0 && (
         <p className="text-sm text-discord-muted text-center py-4">
-          No sources configured. Click + Add to create one.
+          No sources configured. Add one above or paste multiple URLs.
         </p>
       )}
 
@@ -280,6 +337,18 @@ function SourcesField({
       </div>
     </div>
   );
+}
+
+function deriveLabel(url: string): string {
+  try {
+    const path = new URL(url).pathname.replace(/^\//, "").replace(/\/$/, "");
+    const parts = path.split("/").filter(Boolean);
+    if (parts.length >= 2) return `${parts[0]} / ${parts[parts.length - 1]}`;
+    if (parts.length === 1) return parts[0];
+    return url;
+  } catch {
+    return url;
+  }
 }
 
 function ConfigField({
