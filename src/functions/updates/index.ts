@@ -21,7 +21,7 @@ const updatesManifest: FunctionManifest = {
   configSchema: {
     type: "object",
     properties: {
-      rsshubUrl: { type: "string", default: "http://rsshub:12000", description: "RSSHub base URL" },
+      rsshubUrl: { type: "string", default: "http://rsshub:1200", description: "RSSHub base URL" },
       checkInterval: { type: "number", default: 15, minimum: 1, maximum: 1440, description: "Check interval in minutes" },
       channelId: { type: "string", description: "Discord channel ID to post updates" },
       sources: {
@@ -39,7 +39,7 @@ const updatesManifest: FunctionManifest = {
     required: ["channelId"],
   },
   defaultConfig: {
-    rsshubUrl: "http://rsshub:12000",
+    rsshubUrl: "http://rsshub:1200",
     checkInterval: 15,
     channelId: "",
     sources: [] as RssSource[],
@@ -88,7 +88,7 @@ const updatesManifest: FunctionManifest = {
     }
 
     async function fetchFeed(url: string): Promise<{ title: string; link: string; description?: string }[]> {
-      const rsshubBase = (currentConfig.rsshubUrl as string) || "http://rsshub:12000";
+      const rsshubBase = (currentConfig.rsshubUrl as string) || "http://rsshub:1200";
       const feedUrl = `${rsshubBase}/${url.replace(/^https?:\/\//, "")}`;
 
       try {

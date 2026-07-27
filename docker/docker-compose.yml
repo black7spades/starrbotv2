@@ -38,29 +38,20 @@ services:
     networks:
       - starrbot-network
 
-  # Optional: RSSHub for social media feeds (enable with: docker compose --profile with-rsshub up -d)
   rsshub:
     image: diygod/rsshub:latest
     container_name: starrbot-rsshub
     restart: unless-stopped
     environment:
       - CACHE_TYPE=memory
-      - PUPPETEER_WSENDPOINT=wss://browserless:3000
-    depends_on:
-      - browserless
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:1200/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - starrbot-network
-    profiles:
-      - with-rsshub
-
-  browserless:
-    image: browserless/chrome:latest
-    container_name: starrbot-browserless
-    restart: unless-stopped
-    networks:
-      - starrbot-network
-    profiles:
-      - with-rsshub
 
 volumes:
   redis-data:
