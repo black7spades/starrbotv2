@@ -1,10 +1,15 @@
 import type { FunctionManifest, FunctionInstance } from "../registry/types";
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { configStore } from "config/index";
+import { systemLog } from "utils/systemLog";
 
 interface RssSource {
   url: string;
   label: string;
+}
+
+function log(level: "info" | "warn" | "error", msg: string) {
+  systemLog.add(level, msg, "updates");
 }
 
 const updatesManifest: FunctionManifest = {
@@ -67,6 +72,7 @@ const updatesManifest: FunctionManifest = {
     const botId = config.botId as string;
     let checkInterval: ReturnType<typeof setInterval> | null = null;
     let sourcesChecked = 0;
+    let clientRef: any = null;
 
     function getSources(): RssSource[] {
       return (currentConfig.sources as RssSource[]) || [];
@@ -122,6 +128,13 @@ const updatesManifest: FunctionManifest = {
         return;
       }
 
+      const client = interaction?.client || clientRef;
+      if (!client) {
+        log("error", "checkFeeds: no client available to fetch channel");
+        if (interaction) await interaction.editReply({ content: "❌ Bot client not available." });
+        return;
+      }
+
       if (interaction) {
         await interaction.editReply({ content: `🔄 Checking ${sources.length} feed(s)...` });
       }
@@ -134,7 +147,7 @@ const updatesManifest: FunctionManifest = {
           if (configStore.hasPostedUrl(botId, item.link)) continue;
 
           try {
-            const channel = await interaction?.client?.channels?.fetch(channelId);
+            const channel = await client.channels.fetch(channelId);
             if (!channel || !("send" in channel)) continue;
 
             const embed = new EmbedBuilder()
@@ -155,6 +168,7 @@ const updatesManifest: FunctionManifest = {
         sourcesChecked++;
       }
 
+      log("info", `checkFeeds: ${newItems} new items across ${sources.length} feeds`);
       if (interaction) {
         await interaction.editReply({
           content: newItems > 0
@@ -168,7 +182,7 @@ const updatesManifest: FunctionManifest = {
       name: "updates",
       config: currentConfig,
       async onLoad(bot: any) {
-        console.log("[updates] Loaded, monitoring channel:", currentConfig.channelId);
+        log("info", `Loaded — channel=${currentConfig.channelId} interval=${currentConfig.checkInterval}m`);
         const interval = (currentConfig.checkInterval as number) || 15;
         checkInterval = setInterval(() => checkFeeds(), interval * 60 * 1000);
       },
@@ -188,6 +202,7 @@ const updatesManifest: FunctionManifest = {
       },
       async handleCommand(interaction: any) {
         if (interaction.commandName !== "updates") return;
+        if (!clientRef) clientRef = interaction.client;
         const sub = interaction.options.getSubcommand();
 
         if (sub === "check") {

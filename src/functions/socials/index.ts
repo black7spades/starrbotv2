@@ -1,5 +1,6 @@
 import type { FunctionManifest, FunctionInstance } from "../registry/types";
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
+import { systemLog } from "utils/systemLog";
 
 interface SocialPost {
   message: string;
@@ -9,7 +10,9 @@ interface SocialPost {
   results: Record<string, { ok: boolean; error?: string }>;
 }
 
-const postsHistory: SocialPost[] = [];
+function log(level: "info" | "warn" | "error", msg: string) {
+  systemLog.add(level, msg, "socials");
+}
 
 async function postToTwitter(bearerToken: string, message: string): Promise<{ ok: boolean; error?: string }> {
   try {
@@ -132,6 +135,7 @@ const socialsManifest: FunctionManifest = {
   async createInstance(config: Record<string, unknown>): Promise<FunctionInstance> {
     const currentConfig = { ...config };
     let postsSent = 0;
+    const postsHistory: SocialPost[] = [];
 
     async function postToPlatforms(message: string, platforms: string[], userId: string): Promise<Record<string, { ok: boolean; error?: string }>> {
       const results: Record<string, { ok: boolean; error?: string }> = {};
@@ -179,7 +183,7 @@ const socialsManifest: FunctionManifest = {
       name: "socials",
       config: currentConfig,
       async onLoad(bot: any) {
-        console.log("[socials] Loaded, monitoring channel:", currentConfig.channelId);
+        log("info", `Loaded — channel=${currentConfig.channelId} platforms=${(currentConfig.platforms as string[])?.join(",") || "none"}`);
       },
       async onUnload() {},
       async onConfigChange(newConfig: Record<string, unknown>) {
