@@ -414,14 +414,13 @@ const ticketsManifest: FunctionManifest = {
 
           for (const ticket of closed) {
             try {
-              const thread = await interaction.client.channels.fetch(ticket.threadId);
-              if (thread && "delete" in thread) {
-                await thread.delete(`Purged by ${interaction.user.tag}`);
-                deleted++;
-              } else {
-                notFound++;
-              }
-            } catch {
+              const thread = await interaction.guild?.threads.fetch(ticket.threadId);
+              if (!thread) { notFound++; continue; }
+              if (thread.archived) await thread.setArchived(false, "Purge — unarchiving to delete");
+              await thread.delete(`Purged by ${interaction.user.tag}`);
+              deleted++;
+            } catch (err: any) {
+              log("warn", `purge: failed to delete ${ticket.ticketId} (${ticket.threadId}): ${err.message}`);
               failed++;
             }
           }
