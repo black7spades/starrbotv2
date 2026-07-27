@@ -47,10 +47,9 @@ services:
     restart: unless-stopped
     ports:
       - "1200:1200"
-    env_file:
-      - .env
     environment:
       - CACHE_TYPE=memory
+      - INSTAGRAM_COOKIE=sessionid=184371779%3AKt4I2YQGwRVnfZ%3A17%3AAYgH14zF-ezy5a4xa6Ga80eL4Tj7Z6JR2xfJaE_ajw
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:1200/healthz"]
       interval: 30s
