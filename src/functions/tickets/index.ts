@@ -77,6 +77,7 @@ const ticketsManifest: FunctionManifest = {
     const currentConfig = { ...config };
     let ticketsCreated = 0;
     let clientRef: any = null;
+    const ticketOpeners = new Map<string, string>();
 
     async function sendLogSummary(
       ticketId: string,
@@ -304,6 +305,7 @@ const ticketsManifest: FunctionManifest = {
           ticketsCreated++;
 
           log("info", `ticket ${ticketId} created in thread ${thread.id}`);
+          ticketOpeners.set(thread.id, interaction.user.id);
           await interaction.editReply({
             content: `✅ Ticket created!\n\n**${ticketId}**: ${subject}\n<#${thread.id}>`,
           });
@@ -335,13 +337,9 @@ const ticketsManifest: FunctionManifest = {
 
           await interaction.editReply({ embeds: [closeEmbed] });
 
-          const opener = await thread.members.fetch().then((m: any) => {
-            return m.find((mem: any) => !mem.user.bot && mem.id !== interaction.user.id);
-          });
-
-          // If opener not found (e.g. creator closed their own ticket), use the closer as fallback
-          const submitterId = opener?.id || interaction.user.id;
-          log("info", `close: ticket=${ticketName} opener=${opener?.id || "none"} ownerId=${thread.ownerId} submitter=${submitterId}`);
+          const submitterId = ticketOpeners.get(thread.id) || thread.ownerId;
+          ticketOpeners.delete(thread.id);
+          log("info", `close: ticket=${ticketName} submitter=${submitterId}`);
           if (submitterId) {
             await sendRatingPrompt(thread, submitterId, interaction.user.id);
           } else {
