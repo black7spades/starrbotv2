@@ -123,7 +123,21 @@ const ticketsManifest: FunctionManifest = {
         });
 
         collector.stop();
-        await thread.setArchived(true, `Rated ${rating}/5 by submitter`);
+
+        try {
+          await thread.setLocked(true, "Ticket closed — rated by submitter");
+          await thread.members.remove(submitterId, "Ticket closed — access revoked").catch(() => {});
+          await thread.setArchived(true, `Rated ${rating}/5 by submitter`);
+        } catch (err) {
+          console.error("[tickets] Failed to archive thread:", err);
+          await thread.send({
+            embeds: [
+              new EmbedBuilder()
+                .setDescription("⚠️ Could not archive this thread. Please archive it manually.")
+                .setColor(0xed4245),
+            ],
+          });
+        }
       });
 
       collector.on("end", async (collected: any) => {
@@ -147,7 +161,14 @@ const ticketsManifest: FunctionManifest = {
                 .setColor(0x95a5a6),
             ],
           });
-          await thread.setArchived(true, "No rating submitted");
+
+          try {
+            await thread.setLocked(true, "Ticket closed — no rating");
+            await thread.members.remove(submitterId, "Ticket closed — access revoked").catch(() => {});
+            await thread.setArchived(true, "No rating submitted");
+          } catch (err) {
+            console.error("[tickets] Failed to archive thread:", err);
+          }
         }
       });
     }
@@ -252,7 +273,12 @@ const ticketsManifest: FunctionManifest = {
           if (submitterId) {
             await sendRatingPrompt(thread, submitterId, interaction.user.id);
           } else {
-            await thread.setArchived(true, "Closed — could not identify submitter for rating");
+            try {
+              await thread.setLocked(true, "Closed — could not identify submitter");
+              await thread.setArchived(true, "Closed — could not identify submitter");
+            } catch (err) {
+              console.error("[tickets] Failed to archive thread:", err);
+            }
           }
         }
       },
