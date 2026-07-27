@@ -3,6 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { useGuildStore } from "../store/guildStore";
 import { useAuthStore } from "../store/authStore";
 
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
 export default function DiscordCallback() {
   const navigate = useNavigate();
   const setDiscordData = useGuildStore((s) => s.setDiscordData);
@@ -10,19 +15,20 @@ export default function DiscordCallback() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const data = params.get("data");
+    const data = getCookie("discord_data");
     if (!data) {
-      setError("No data received from Discord");
+      setError("No Discord data received");
       return;
     }
 
     try {
-      const parsed = JSON.parse(atob(data.replace(/-/g, "+").replace(/_/g, "/")));
+      const parsed = JSON.parse(data);
       setDiscordData(
         { id: parsed.discordId, username: parsed.discordUsername, avatar: parsed.discordAvatar },
         parsed.guilds
       );
+      // Clear the cookie
+      document.cookie = "discord_data=; path=/; max-age=0";
       // Refresh auth state since the backend just issued JWT cookies
       initAuth().then(() => navigate("/", { replace: true }));
     } catch {

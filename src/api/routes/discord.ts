@@ -126,15 +126,23 @@ export const discordRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     // Store guilds data in a cookie for the frontend to read on callback
-    const guildData = Buffer.from(JSON.stringify({
+    const guildPayload = {
       discordId: discordUser.id,
       discordUsername: discordUser.username,
       discordAvatar: discordUser.avatar
         ? `${DISCORD_CDN}/avatars/${discordUser.id}/${discordUser.avatar}.${discordUser.avatar.startsWith("a_") ? "gif" : "png"}?size=64`
         : null,
       guilds: manageable,
-    })).toString("base64url");
+    };
 
-    reply.redirect(`/discord-callback?data=${guildData}`);
+    reply.setCookie("discord_data", JSON.stringify(guildPayload), {
+      httpOnly: false,
+      secure: request.protocol === "https",
+      sameSite: "lax",
+      maxAge: 24 * 60 * 60,
+      path: "/",
+    });
+
+    reply.redirect("/discord-callback");
   });
 };
