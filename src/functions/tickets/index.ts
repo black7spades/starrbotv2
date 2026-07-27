@@ -42,12 +42,14 @@ const ticketsManifest: FunctionManifest = {
     properties: {
       adminChannelId: { type: "string", description: "Channel where tickets are created" },
       adminRoleId: { type: "string", description: "Role that can manage tickets" },
+      logChannelId: { type: "string", description: "Channel for ticket outcome summaries (optional)" },
     },
     required: ["adminChannelId", "adminRoleId"],
   },
   defaultConfig: {
     adminChannelId: "",
     adminRoleId: "",
+    logChannelId: "",
   },
   commands: [
     new SlashCommandBuilder()
@@ -69,6 +71,43 @@ const ticketsManifest: FunctionManifest = {
   async createInstance(config: Record<string, unknown>): Promise<FunctionInstance> {
     const currentConfig = { ...config };
     let ticketsCreated = 0;
+    let clientRef: any = null;
+
+    async function sendLogSummary(
+      ticketId: string,
+      thread: any,
+      submitterId: string,
+      closedBy: string,
+      rating: number,
+      ratingLabel: string,
+    ) {
+      const logChannelId = currentConfig.logChannelId as string;
+      if (!logChannelId || !clientRef) return;
+
+      try {
+        const logChannel = await clientRef.channels.fetch(logChannelId);
+        if (!logChannel?.isTextBased()) return;
+
+        const ratingField = rating > 0
+          ? { name: "Rating", value: `${"⭐".repeat(rating)} (${rating}/5 — ${ratingLabel})`, inline: true }
+          : { name: "Rating", value: "No response", inline: true };
+
+        const summaryEmbed = new EmbedBuilder()
+          .setTitle(`${ticketId} — Summary`)
+          .addFields(
+            { name: "Thread", value: `<#${thread.id}>`, inline: true },
+            { name: "Opened by", value: `<@${submitterId}>`, inline: true },
+            { name: "Closed by", value: `<@${closedBy}>`, inline: true },
+            ratingField,
+          )
+          .setColor(rating >= 4 ? 0x57f287 : rating >= 3 ? 0xfee75c : rating > 0 ? 0xed4245 : 0x95a5a6)
+          .setTimestamp();
+
+        await logChannel.send({ embeds: [summaryEmbed] });
+      } catch (err) {
+        console.error("[tickets] Failed to send log summary:", err);
+      }
+    }
 
     async function sendRatingPrompt(thread: any, submitterId: string, closerId: string) {
       const ratingEmbed = new EmbedBuilder()
@@ -122,6 +161,8 @@ const ticketsManifest: FunctionManifest = {
           rating,
         });
 
+        await sendLogSummary(ticketId, thread, submitterId, closerId, rating, ratingLabels[rating]);
+
         collector.stop();
 
         try {
@@ -154,6 +195,8 @@ const ticketsManifest: FunctionManifest = {
             rating: 0,
           });
 
+          await sendLogSummary(ticketId, thread, submitterId, closerId, 0, "No response");
+
           await thread.send({
             embeds: [
               new EmbedBuilder()
@@ -177,6 +220,7 @@ const ticketsManifest: FunctionManifest = {
       name: "tickets",
       config: currentConfig,
       async onLoad(bot: any) {
+        clientRef = bot.client;
         console.log("[tickets] Loaded, admin channel:", currentConfig.adminChannelId);
       },
       async onUnload() {},
@@ -276,6 +320,7 @@ const ticketsManifest: FunctionManifest = {
             try {
               await thread.setLocked(true, "Closed — could not identify submitter");
               await thread.setArchived(true, "Closed — could not identify submitter");
+              await sendLogSummary(ticketName, thread, thread.ownerId || "unknown", interaction.user.id, 0, "No response");
             } catch (err) {
               console.error("[tickets] Failed to archive thread:", err);
             }
