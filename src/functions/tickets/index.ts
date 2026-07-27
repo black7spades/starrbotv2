@@ -165,14 +165,28 @@ const ticketsManifest: FunctionManifest = {
       }
 
       const collector = ratingMsg.createReactionCollector({
-        filter: (reaction: any, user: any) => user.id === submitterId && emojis.includes(reaction.emoji.name),
+        filter: (reaction: any, user: any) => user.id === submitterId && !user.bot,
         max: 1,
         time: 86400000,
       });
 
       collector.on("collect", async (reaction: any) => {
-        log("info", `collector.collect: emoji=${reaction.emoji.name} user=${reaction.users.cache.last()?.id}`);
-        const rating = emojis.indexOf(reaction.emoji.name) + 1;
+        const emojiName = reaction.emoji.name || "";
+        const emojiId = reaction.emoji.id;
+        log("info", `collector.collect: emoji.name="${emojiName}" emoji.id=${emojiId} user=${reaction.users.cache.last()?.id}`);
+
+        let rating = 0;
+        if (emojiId === "1️⃣" || emojiName === "1️⃣" || emojiName === "1") rating = 1;
+        else if (emojiId === "2️⃣" || emojiName === "2️⃣" || emojiName === "2") rating = 2;
+        else if (emojiId === "3️⃣" || emojiName === "3️⃣" || emojiName === "3") rating = 3;
+        else if (emojiId === "4️⃣" || emojiName === "4️⃣" || emojiName === "4") rating = 4;
+        else if (emojiId === "5️⃣" || emojiName === "5️⃣" || emojiName === "5") rating = 5;
+
+        if (rating === 0) {
+          log("warn", `collector.collect: unrecognized emoji "${emojiName}", ignoring`);
+          return;
+        }
+
         const ratingLabels = ["", "Unsatisfied", "Not happy", "Okay", "Satisfied", "Overjoyed"];
 
         await thread.send({
