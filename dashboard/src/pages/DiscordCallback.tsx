@@ -18,7 +18,7 @@ export default function DiscordCallback() {
     }
 
     try {
-      const parsed = JSON.parse(atob(data));
+      const parsed = JSON.parse(atob(data.replace(/-/g, "+").replace(/_/g, "/")));
       setDiscordData(
         { id: parsed.discordId, username: parsed.discordUsername, avatar: parsed.discordAvatar },
         parsed.guilds
