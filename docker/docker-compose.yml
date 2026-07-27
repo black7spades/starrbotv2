@@ -42,13 +42,14 @@ services:
       - starrbot-network
 
   rsshub:
-    image: diygod/rsshub:latest
+    image: diygod/rsshub:chromium-bundled
     container_name: starrbot-rsshub
     restart: unless-stopped
     ports:
       - "1200:1200"
     environment:
       - CACHE_TYPE=memory
+      - INSTAGRAM_COOKIE=${INSTAGRAM_COOKIE:-}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:1200/healthz"]
       interval: 30s
