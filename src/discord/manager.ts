@@ -93,26 +93,38 @@ function createBotInstance(botConfig: Bot): ManagedBot {
 
     if (commands.length === 0) return;
 
-    const guildId = botConfig.guildId || process.env.GUILD_ID || client.guilds.cache.first()?.id;
+    const envGuildId = process.env.GUILD_ID;
+    const guildIds = envGuildId
+      ? [envGuildId]
+      : [...client.guilds.cache.keys()];
+
+    if (guildIds.length === 0) {
+      log("warn", "No guilds found — skipping command registration");
+      return;
+    }
+
+    let registered = 0;
+    for (const guildId of guildIds) {
+      try {
+        await rest.put(Routes.applicationGuildCommands(botConfig.clientId, guildId), { body: commands });
+        registered++;
+        log("info", `Registered ${commands.length} slash commands (guild ${guildId})`);
+      } catch (err: any) {
+        log("warn", `Failed to register commands in guild ${guildId}: ${err.message}`);
+      }
+    }
+
+    if (registered === 0) {
+      log("error", "Failed to register commands in any guild — bot may need to be re-invited with applications.commands scope");
+    }
 
     try {
-      if (guildId) {
-        await rest.put(Routes.applicationGuildCommands(botConfig.clientId, guildId), { body: commands });
-        log("info", `Registered ${commands.length} slash commands (guild ${guildId})`);
-        try {
-          const globalCmds = await rest.get(Routes.applicationCommands(botConfig.clientId)) as any[];
-          if (globalCmds && globalCmds.length > 0) {
-            await rest.put(Routes.applicationCommands(botConfig.clientId), { body: [] });
-            log("info", `Cleared ${globalCmds.length} stale global commands`);
-          }
-        } catch {}
-      } else {
-        await rest.put(Routes.applicationCommands(botConfig.clientId), { body: commands });
-        log("info", `Registered ${commands.length} slash commands (global — may take up to 1 hour to propagate)`);
+      const globalCmds = await rest.get(Routes.applicationCommands(botConfig.clientId)) as any[];
+      if (globalCmds && globalCmds.length > 0) {
+        await rest.put(Routes.applicationCommands(botConfig.clientId), { body: [] });
+        log("info", `Cleared ${globalCmds.length} stale global commands`);
       }
-    } catch (err: any) {
-      log("error", `Failed to register commands: ${err.message}`);
-    }
+    } catch {}
   }
 
   function setupEventHandlers(): void {
