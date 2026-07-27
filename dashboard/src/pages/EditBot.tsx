@@ -1,14 +1,12 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useGuildStore } from "../store/guildStore";
 import { api } from "../api/client";
 
 export default function EditBot() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { guilds, discordUser } = useGuildStore();
 
   const { data: bot, isLoading } = useQuery({
     queryKey: ["bot", id],
@@ -19,7 +17,6 @@ export default function EditBot() {
   const [name, setName] = useState("");
   const [token, setToken] = useState("");
   const [clientId, setClientId] = useState("");
-  const [guildId, setGuildId] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -39,7 +36,6 @@ export default function EditBot() {
     if (bot) {
       setName(bot.name || "");
       setClientId(bot.clientId || "");
-      setGuildId(bot.guildId || "");
     }
   }, [bot]);
 
@@ -52,7 +48,6 @@ export default function EditBot() {
       if (name !== bot.name) data.name = name;
       if (token) data.token = token;
       if (clientId !== bot.clientId) data.clientId = clientId;
-      if (guildId !== (bot.guildId || "")) data.guildId = guildId || null;
       await api.updateBot(id!, data);
       queryClient.invalidateQueries({ queryKey: ["bot", id] });
       navigate(`/bots/${id}`);
@@ -96,23 +91,6 @@ export default function EditBot() {
           <label className="block text-sm font-medium mb-1">Client ID</label>
           <input value={clientId} onChange={e => setClientId(e.target.value)} placeholder="Leave blank to keep current" className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent" />
         </div>
-
-        {discordUser && guilds.length > 0 && (
-          <div>
-            <label className="block text-sm font-medium mb-1">Target Server</label>
-            <select
-              value={guildId}
-              onChange={e => setGuildId(e.target.value)}
-              className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent"
-            >
-              <option value="">No server (bot will be inert)</option>
-              {guilds.map((g) => (
-                <option key={g.id} value={g.id}>{g.name}</option>
-              ))}
-            </select>
-            <p className="text-xs text-discord-muted mt-1">Bot registers commands to this server. Without a server, the bot connects but stays inert.</p>
-          </div>
-        )}
 
         <div className="flex gap-2 pt-2">
           <button type="submit" disabled={submitting} className="btn-primary">{submitting ? "Saving..." : "Save Changes"}</button>

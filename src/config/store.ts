@@ -344,6 +344,7 @@ export class ConfigStore {
       return {
         id: bot.id,
         name: bot.name,
+        clientId: bot.clientId,
         avatarUrl: bot.avatarUrl,
         enabled: bot.enabled,
         status: "stopped",

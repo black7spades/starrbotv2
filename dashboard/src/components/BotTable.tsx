@@ -11,13 +11,14 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { api } from "../api/client";
+import InviteButton from "./InviteButton";
 
 interface BotRow {
   id: string;
   name: string;
+  clientId: string;
   status: string;
   error: string | null;
-  guildId: string | null;
   guildCount: number;
   activeFunctions: string[];
   allFunctions: string[];
@@ -105,16 +106,16 @@ export default function BotTable({ bots }: { bots: BotRow[] }) {
       },
       filterFn: "includesString",
     }),
-    col.accessor("guildId", {
-      header: "Server",
-      cell: (info) => {
-        const id = info.getValue();
-        return id ? (
-          <span className="text-xs font-mono text-discord-muted truncate max-w-[120px] block" title={id}>{id}</span>
-        ) : (
-          <span className="text-xs text-discord-muted italic">none</span>
-        );
-      },
+    col.display({
+      id: "invite",
+      header: "Invite",
+      cell: (info) => (
+        <InviteButton
+          clientId={info.row.original.clientId}
+          className="px-2 py-1 text-xs font-medium rounded bg-discord-accent/10 text-discord-accent hover:bg-discord-accent/20 transition-colors"
+        />
+      ),
+      size: 120,
     }),
     col.accessor("activeFunctions", {
       header: "Functions",

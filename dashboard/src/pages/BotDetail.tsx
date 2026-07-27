@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { BotTabs } from "../components/BotTabs";
+import InviteButton from "../components/InviteButton";
 import { useBotStore } from "../store/botStore";
 import { useAuthStore } from "../store/authStore";
 
@@ -150,6 +151,10 @@ export default function BotDetail() {
             >
               Edit
             </button>
+            <InviteButton
+              clientId={bot.clientId}
+              className="btn-primary text-sm inline-flex items-center"
+            />
           </div>
         )}
       </div>

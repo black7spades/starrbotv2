@@ -1,15 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useGuildStore } from "../store/guildStore";
 import { api } from "../api/client";
 
 export default function CreateBot() {
   const navigate = useNavigate();
-  const { guilds, discordUser } = useGuildStore();
   const [name, setName] = useState("");
   const [token, setToken] = useState("");
   const [clientId, setClientId] = useState("");
-  const [guildId, setGuildId] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [templates, setTemplates] = useState<any[]>([]);
@@ -25,14 +22,10 @@ export default function CreateBot() {
     setSubmitting(true);
     try {
       if (selectedTemplate) {
-        const data: any = { name, token, clientId };
-        if (guildId) data.guildId = guildId;
-        const bot = await api.createBotFromTemplate(selectedTemplate.id, data);
+        const bot = await api.createBotFromTemplate(selectedTemplate.id, { name, token, clientId });
         navigate(`/bots/${bot.id}`);
       } else {
-        const data: any = { name, token, clientId };
-        if (guildId) data.guildId = guildId;
-        const bot = await api.createBot(data);
+        const bot = await api.createBot({ name, token, clientId });
         navigate(`/bots/${bot.id}`);
       }
     } catch (err: any) {
@@ -120,31 +113,7 @@ export default function CreateBot() {
           <p className="text-xs text-discord-muted mt-1">Found in the Discord Developer Portal under <strong>OAuth2</strong> → <strong>Client ID</strong></p>
         </div>
 
-        {discordUser && guilds.length > 0 && (
-          <div>
-            <label className="block text-sm font-medium mb-1">Target Server</label>
-            <select
-              value={guildId}
-              onChange={e => setGuildId(e.target.value)}
-              className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent"
-            >
-              <option value="">No server (configure later)</option>
-              {guilds.map((g) => (
-                <option key={g.id} value={g.id}>{g.name}</option>
-              ))}
-            </select>
-            <p className="text-xs text-discord-muted mt-1">Bot must be invited to the server first.</p>
-          </div>
-        )}
-
-        {!discordUser && (
-          <div className="p-3 rounded-lg bg-discord-accent/10 border border-discord-accent/20 text-sm">
-            <p className="text-discord-accent font-medium mb-1">Discord not connected</p>
-            <p className="text-discord-muted">Login with Discord to select a target server, or leave blank to configure later.</p>
-          </div>
-        )}
-
-        <div className="flex gap-2">
+        <div className="flex gap-2 pt-2">
           <button type="submit" disabled={submitting} className="btn-primary">
             {submitting ? "Creating..." : selectedTemplate ? "Create from Template" : "Create Bot"}
           </button>

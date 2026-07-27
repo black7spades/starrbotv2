@@ -119,6 +119,7 @@ export type BotStatus = z.infer<typeof BotStatusSchema>;
 export const BotSummarySchema = z.object({
   id: z.string(),
   name: z.string(),
+  clientId: z.string(),
   avatarUrl: z.string().url().nullable().optional(),
   enabled: z.boolean(),
   status: BotStatusSchema,
