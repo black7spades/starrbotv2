@@ -12,6 +12,7 @@ import { join } from "path";
 
 const DATA_DIR = join(__dirname, "../../../data");
 const COUNTER_FILE = join(DATA_DIR, "ticket-counter.json");
+const OPENERS_FILE = join(DATA_DIR, "ticket-openers.json");
 
 function log(level: "info" | "warn" | "error", msg: string) {
   systemLog.add(level, msg, "tickets");
@@ -31,6 +32,22 @@ function saveTicketCounter(counter: number): void {
   try {
     if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
     writeFileSync(COUNTER_FILE, JSON.stringify({ counter }));
+  } catch {}
+}
+
+function loadOpeners(): Record<string, string> {
+  try {
+    if (existsSync(OPENERS_FILE)) {
+      return JSON.parse(readFileSync(OPENERS_FILE, "utf8"));
+    }
+  } catch {}
+  return {};
+}
+
+function saveOpeners(openers: Record<string, string>): void {
+  try {
+    if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
+    writeFileSync(OPENERS_FILE, JSON.stringify(openers));
   } catch {}
 }
 
@@ -77,7 +94,6 @@ const ticketsManifest: FunctionManifest = {
     const currentConfig = { ...config };
     let ticketsCreated = 0;
     let clientRef: any = null;
-    const ticketOpeners = new Map<string, string>();
 
     async function sendLogSummary(
       ticketId: string,
@@ -305,7 +321,9 @@ const ticketsManifest: FunctionManifest = {
           ticketsCreated++;
 
           log("info", `ticket ${ticketId} created in thread ${thread.id}`);
-          ticketOpeners.set(thread.id, interaction.user.id);
+          const openers = loadOpeners();
+          openers[thread.id] = interaction.user.id;
+          saveOpeners(openers);
           await interaction.editReply({
             content: `✅ Ticket created!\n\n**${ticketId}**: ${subject}\n<#${thread.id}>`,
           });
@@ -337,21 +355,23 @@ const ticketsManifest: FunctionManifest = {
 
           await interaction.editReply({ embeds: [closeEmbed] });
 
-          const submitterId = ticketOpeners.get(thread.id) || thread.ownerId;
-          ticketOpeners.delete(thread.id);
-          log("info", `close: ticket=${ticketName} submitter=${submitterId}`);
-          if (submitterId) {
-            await sendRatingPrompt(thread, submitterId, interaction.user.id);
-          } else {
-            log("warn", `close: no submitter identified for ${ticketName}`);
+          const openers = loadOpeners();
+          const submitterId = openers[thread.id];
+          delete openers[thread.id];
+          saveOpeners(openers);
+
+          if (!submitterId) {
+            log("warn", `close: no persisted opener for ${ticketName}, cannot send rating`);
             try {
-              await thread.setLocked(true, "Closed — could not identify submitter");
-              await thread.setArchived(true, "Closed — could not identify submitter");
-              await sendLogSummary(ticketName, thread, thread.ownerId || "unknown", interaction.user.id, 0, "No response");
+              await thread.setLocked(true, "Closed — could not identify opener");
+              await thread.setArchived(true, "Closed — could not identify opener");
             } catch (err: any) {
               log("error", `Failed to archive thread: ${err.message}`);
             }
+            return;
           }
+          log("info", `close: ticket=${ticketName} submitter=${submitterId}`);
+          await sendRatingPrompt(thread, submitterId, interaction.user.id);
         }
       },
       getStats() {
