@@ -62,7 +62,7 @@ function OverviewTab({ bot }: { bot: any }) {
                   <img src={guild.icon} alt="" className="w-8 h-8 rounded-full" />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-discord-accent/20 flex items-center justify-center text-sm">
-                    {guild.name.charAt(0)}
+                    {guild.name?.charAt(0) ?? "?"}
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
