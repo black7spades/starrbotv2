@@ -109,6 +109,10 @@ class ApiClient {
     return this.patch(`/api/bots/${botId}/functions/${functionName}`, data);
   }
 
+  testFeed(rsshubUrl: string, feedPath: string) {
+    return this.post<any>("/api/functions/test-feed", { rsshubUrl, feedPath });
+  }
+
   // Users (admin)
   getUsers() {
     return this.get<any[]>("/api/users");

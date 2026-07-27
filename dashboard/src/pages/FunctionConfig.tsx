@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { api } from "../api/client";
 import { Slider } from "../components/ui/Slider";
+import SocialSetupWizard from "../components/SocialSetupWizard";
 
 const FunctionConfigSchema = z.object({
   config: z.record(z.string(), z.unknown()).optional(),
@@ -23,6 +24,7 @@ export default function FunctionConfig() {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [isConfigured, setIsConfigured] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   const {
     register,
@@ -129,6 +131,14 @@ export default function FunctionConfig() {
                     field={field}
                     value={watch(`config.${key}`) as any[]}
                     onChange={(val) => setValue(`config.${key}`, val)}
+                    functionName={name || ""}
+                    rsshubUrl={watch("config.rsshubUrl") as string || currentConfig.rsshubUrl || "http://rsshub:1200"}
+                    onWizardAdd={(source) => {
+                      const current = (watch(`config.${key}`) as any[]) || [];
+                      setValue(`config.${key}`, [...current, source]);
+                    }}
+                    wizardOpen={wizardOpen}
+                    setWizardOpen={setWizardOpen}
                   />
                 );
               }
@@ -207,11 +217,21 @@ function SourcesField({
   field,
   value,
   onChange,
+  functionName,
+  rsshubUrl,
+  onWizardAdd,
+  wizardOpen,
+  setWizardOpen,
 }: {
   name: string;
   field: any;
   value: any[];
   onChange: (val: any[]) => void;
+  functionName: string;
+  rsshubUrl: string;
+  onWizardAdd: (source: { url: string; label: string; enabled: boolean }) => void;
+  wizardOpen: boolean;
+  setWizardOpen: (v: boolean) => void;
 }) {
   const sources: any[] = Array.isArray(value) ? value : [];
   const itemFields = field.items?.properties || {};
@@ -261,10 +281,38 @@ function SourcesField({
           <h4 className="font-medium">{field.title || name}</h4>
           {field.description && <p className="text-sm text-discord-muted">{field.description}</p>}
         </div>
-        <button type="button" onClick={() => addSource()} className="btn-primary text-sm">
-          + Add
-        </button>
+        <div className="flex gap-2">
+          {functionName === "updates" && (
+            <button type="button" onClick={() => setWizardOpen(true)} className="btn-primary text-sm">
+              + Add Social
+            </button>
+          )}
+          <button type="button" onClick={() => addSource()} className="btn-secondary text-sm">
+            + Add URL
+          </button>
+        </div>
       </div>
+
+      {functionName === "updates" && sources.length === 0 && (
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { icon: "📸", label: "Instagram", path: "instagram/2/user/" },
+            { icon: "▶️", label: "YouTube", path: "youtube/channel/" },
+            { icon: "🤖", label: "Reddit", path: "reddit/hot/" },
+            { icon: "🐙", label: "GitHub", path: "github/repos/" },
+          ].map((p) => (
+            <button
+              key={p.label}
+              type="button"
+              onClick={() => setWizardOpen(true)}
+              className="flex flex-col items-center gap-1 p-3 rounded-xl bg-discord-input border border-discord-border hover:border-discord-accent/50 transition-colors"
+            >
+              <span className="text-xl">{p.icon}</span>
+              <span className="text-xs text-discord-muted">{p.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="flex gap-2">
         <textarea
@@ -335,6 +383,14 @@ function SourcesField({
           </div>
         ))}
       </div>
+
+      {wizardOpen && functionName === "updates" && (
+        <SocialSetupWizard
+          rsshubUrl={rsshubUrl}
+          onAdd={onWizardAdd}
+          onClose={() => setWizardOpen(false)}
+        />
+      )}
     </div>
   );
 }

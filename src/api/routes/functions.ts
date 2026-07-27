@@ -15,6 +15,48 @@ export const functionRoutes: FastifyPluginAsync = async (fastify: FastifyInstanc
     return getAllManifests();
   });
 
+  fastify.post<{ Body: { rsshubUrl: string; feedPath: string } }>(
+    "/test-feed",
+    { preHandler: optionalAuth },
+    async (request, reply) => {
+      const { rsshubUrl, feedPath } = request.body;
+      if (!rsshubUrl || !feedPath) {
+        return reply.code(400).send({ error: "Bad Request", message: "rsshubUrl and feedPath are required" });
+      }
+
+      const cleanBase = rsshubUrl.replace(/\/+$/, "");
+      const cleanPath = feedPath.replace(/^\/+/, "");
+      const url = `${cleanBase}/${cleanPath}`;
+
+      try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+        if (!res.ok) {
+          return { ok: false, error: `HTTP ${res.status}`, url };
+        }
+        const text = await res.text();
+
+        const items: { title: string; link: string }[] = [];
+        const itemMatches = text.matchAll(/<item>([\s\S]*?)<\/item>/gi);
+        for (const match of itemMatches) {
+          const block = match[1];
+          const title = block.match(/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>/i)?.[1]
+            || block.match(/<title>([\s\S]*?)<\/title>/i)?.[1]
+            || "Untitled";
+          const link = block.match(/<link>([\s\S]*?)<\/link>/i)?.[1] || "";
+          if (items.length < 3) items.push({ title: title.trim(), link: link.trim() });
+        }
+
+        if (items.length === 0) {
+          return { ok: false, error: "Feed returned 0 items (may need Instagram cookie or invalid URL)", url, raw: text.slice(0, 500) };
+        }
+
+        return { ok: true, itemCount: items.length, items, url };
+      } catch (err: any) {
+        return { ok: false, error: err.message || "Fetch failed", url };
+      }
+    }
+  );
+
   fastify.get<{ Params: { name: string } }>(
     "/:name",
     { preHandler: optionalAuth },
