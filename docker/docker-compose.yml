@@ -45,6 +45,8 @@ services:
     image: diygod/rsshub:latest
     container_name: starrbot-rsshub
     restart: unless-stopped
+    ports:
+      - "1200:1200"
     environment:
       - CACHE_TYPE=memory
     healthcheck:
