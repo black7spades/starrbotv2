@@ -8,7 +8,8 @@ const DISCORD_CDN = "https://cdn.discordapp.com";
 
 const clientId = () => process.env.DISCORD_CLIENT_ID || "";
 const clientSecret = () => process.env.DISCORD_CLIENT_SECRET || "";
-const redirectUri = (req: any) => `${req.protocol}://${req.host}/api/auth/discord/callback`;
+const baseUrl = () => process.env.BASE_URL || `http://localhost:${process.env.PORT || "2013"}`;
+const redirectUri = (req: any) => `${baseUrl()}/api/auth/discord/callback`;
 
 export const discordRoutes: FastifyPluginAsync = async (fastify) => {
   // Check if Discord OAuth is configured

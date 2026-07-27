@@ -13,6 +13,7 @@ services:
       - REDIS_URL=redis://redis:6379
       - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
       - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET}
+      - BASE_URL=${BASE_URL}
       # Optional: override auto-generated secrets
       # - JWT_SECRET=your-custom-secret
       # - JWT_REFRESH_SECRET=your-custom-refresh-secret
