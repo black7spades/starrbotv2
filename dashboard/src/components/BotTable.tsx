@@ -106,7 +106,7 @@ export default function BotTable({ bots }: { bots: BotRow[] }) {
       filterFn: "includesString",
     }),
     col.accessor("guildId", {
-      header: "Guild",
+      header: "Server",
       cell: (info) => {
         const id = info.getValue();
         return id ? (

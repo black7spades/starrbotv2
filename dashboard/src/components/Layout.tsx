@@ -87,7 +87,7 @@ export default function Layout() {
         {/* Guild selector */}
         {discordUser ? (
           <div className="px-2 py-2 border-t border-discord-border shrink-0">
-            <label className="px-2 text-[10px] font-semibold text-discord-muted uppercase tracking-wider">Guild</label>
+            <label className="px-2 text-[10px] font-semibold text-discord-muted uppercase tracking-wider">Server</label>
             <select
               value={selectedGuildId ?? ""}
               onChange={(e) => selectGuild(e.target.value || null)}

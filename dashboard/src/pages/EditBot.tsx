@@ -99,18 +99,18 @@ export default function EditBot() {
 
         {discordUser && guilds.length > 0 && (
           <div>
-            <label className="block text-sm font-medium mb-1">Target Guild</label>
+            <label className="block text-sm font-medium mb-1">Target Server</label>
             <select
               value={guildId}
               onChange={e => setGuildId(e.target.value)}
               className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent"
             >
-              <option value="">No guild (bot will be inert)</option>
+              <option value="">No server (bot will be inert)</option>
               {guilds.map((g) => (
                 <option key={g.id} value={g.id}>{g.name}</option>
               ))}
             </select>
-            <p className="text-xs text-discord-muted mt-1">Bot registers commands to this guild. Without a guild, the bot connects but stays inert.</p>
+            <p className="text-xs text-discord-muted mt-1">Bot registers commands to this server. Without a server, the bot connects but stays inert.</p>
           </div>
         )}
 

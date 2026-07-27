@@ -95,7 +95,7 @@ export function BotCard({ bot }: BotCardProps) {
 
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div className="bg-discord-bg/50 rounded-lg p-3">
-          <p className="text-xs text-discord-muted uppercase tracking-wide">Guilds</p>
+          <p className="text-xs text-discord-muted uppercase tracking-wide">Servers</p>
           <p className="text-2xl font-bold">{bot.guildCount}</p>
         </div>
         <div className="bg-discord-bg/50 rounded-lg p-3">

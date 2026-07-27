@@ -111,7 +111,7 @@ export default function Settings() {
           </div>
         ) : (
           <div>
-            <p className="text-sm text-discord-muted mb-3">Connect your Discord account to detect your servers and manage bots per guild.</p>
+            <p className="text-sm text-discord-muted mb-3">Connect your Discord account to detect your servers and manage bots per server.</p>
             <a href={api.discordAuthUrl()} className="btn-primary inline-block">
               Connect Discord
             </a>

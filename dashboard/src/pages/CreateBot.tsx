@@ -122,13 +122,13 @@ export default function CreateBot() {
 
         {discordUser && guilds.length > 0 && (
           <div>
-            <label className="block text-sm font-medium mb-1">Target Guild</label>
+            <label className="block text-sm font-medium mb-1">Target Server</label>
             <select
               value={guildId}
               onChange={e => setGuildId(e.target.value)}
               className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent"
             >
-              <option value="">No guild (configure later)</option>
+              <option value="">No server (configure later)</option>
               {guilds.map((g) => (
                 <option key={g.id} value={g.id}>{g.name}</option>
               ))}
@@ -140,7 +140,7 @@ export default function CreateBot() {
         {!discordUser && (
           <div className="p-3 rounded-lg bg-discord-accent/10 border border-discord-accent/20 text-sm">
             <p className="text-discord-accent font-medium mb-1">Discord not connected</p>
-            <p className="text-discord-muted">Login with Discord to select a target guild, or leave blank to configure later.</p>
+            <p className="text-discord-muted">Login with Discord to select a target server, or leave blank to configure later.</p>
           </div>
         )}
 
