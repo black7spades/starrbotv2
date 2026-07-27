@@ -14,7 +14,7 @@ export default function BotDetail() {
   const { user } = useAuthStore();
   const { selectBot } = useBotStore();
   const [actionError, setActionError] = useState<string | null>(null);
-  const activeTab = location.pathname.endsWith("/functions") ? "functions" : "overview";
+  const activeTab = location.pathname.endsWith("/functions") ? "functions" : location.pathname.endsWith("/logs") ? "logs" : "overview";
 
   const { data: bot, isLoading, error } = useQuery({
     queryKey: ["bot", id],

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 
@@ -10,6 +10,7 @@ interface BotTabsProps {
 const tabs = [
   { id: "overview", label: "Overview", icon: "📊" },
   { id: "functions", label: "Functions", icon: "🔧" },
+  { id: "logs", label: "Logs", icon: "📋" },
 ];
 
 export function BotTabs({ activeTab, bot }: BotTabsProps) {
@@ -36,6 +37,7 @@ export function BotTabs({ activeTab, bot }: BotTabsProps) {
 
       {activeTab === "overview" && <OverviewTab bot={bot} />}
       {activeTab === "functions" && <FunctionsTab bot={bot} />}
+      {activeTab === "logs" && <LogsTab bot={bot} />}
     </div>
   );
 }
@@ -165,4 +167,103 @@ function formatUptime(ms: number): string {
   if (days > 0) return `${days}d ${hours}h`;
   if (hours > 0) return `${hours}h ${minutes}m`;
   return `${minutes}m`;
+}
+
+const LOG_LEVEL_COLORS: Record<string, string> = {
+  debug: "text-gray-400",
+  info: "text-green-400",
+  warn: "text-yellow-400",
+  error: "text-red-400",
+  fatal: "text-red-500 font-bold",
+};
+
+function LogsTab({ bot }: { bot: any }) {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [level, setLevel] = useState<string>("");
+  const [live, setLive] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const botSource = `bot:${bot.id}`;
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set("source", botSource);
+    if (level) params.set("level", level);
+    params.set("limit", "200");
+
+    fetch(`/api/events/logs?${params}`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((data: any[]) => { setLogs(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [bot.id, level]);
+
+  useEffect(() => {
+    if (!live) return;
+    const es = new EventSource("/api/events/logs/stream", { withCredentials: true });
+    es.onmessage = (e) => {
+      const entry = JSON.parse(e.data);
+      if (entry.source === botSource || entry.source?.startsWith(`${botSource}:`)) {
+        setLogs((prev) => {
+          const next = [...prev, entry];
+          return next.length > 500 ? next.slice(-500) : next;
+        });
+      }
+    };
+    es.onerror = () => es.close();
+    return () => es.close();
+  }, [live, bot.id]);
+
+  useEffect(() => {
+    if (live) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [logs, live]);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <select
+          value={level}
+          onChange={(e) => setLevel(e.target.value)}
+          className="px-3 py-1.5 bg-discord-input border border-discord-border rounded-lg text-sm text-discord-text"
+        >
+          <option value="">All levels</option>
+          <option value="debug">Debug</option>
+          <option value="info">Info</option>
+          <option value="warn">Warn</option>
+          <option value="error">Error</option>
+        </select>
+        <button
+          onClick={() => setLive(!live)}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            live
+              ? "bg-discord-green/20 text-discord-green border border-discord-green/30"
+              : "bg-discord-muted/20 text-discord-muted border border-discord-border"
+          }`}
+        >
+          {live ? "● Live" : "○ Paused"}
+        </button>
+        <span className="text-xs text-discord-muted ml-auto">{logs.length} entries</span>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-8 text-discord-muted text-sm">Loading logs...</div>
+      ) : logs.length === 0 ? (
+        <div className="text-center py-8 text-discord-muted text-sm">No logs for this bot yet.</div>
+      ) : (
+        <div className="bg-discord-input rounded-xl overflow-hidden font-mono text-sm">
+          <div className="h-80 overflow-y-auto p-3 space-y-0.5">
+            {logs.map((log: any) => (
+              <div key={log.id} className="flex gap-2 text-xs leading-relaxed hover:bg-discord-card/50 px-1 rounded">
+                <span className="shrink-0 text-discord-muted w-20">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                <span className={`shrink-0 w-12 text-right uppercase ${LOG_LEVEL_COLORS[log.level] || "text-discord-muted"}`}>
+                  {log.level}
+                </span>
+                <span className="break-all text-discord-text">{log.message}</span>
+              </div>
+            ))}
+            <div ref={bottomRef} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
