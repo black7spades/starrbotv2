@@ -412,9 +412,15 @@ const ticketsManifest: FunctionManifest = {
           let failed = 0;
           let notFound = 0;
 
+          const guild = interaction.guild ?? interaction.client.guilds.cache.get(interaction.guildId);
+          if (!guild) {
+            await interaction.editReply({ content: "❌ Could not resolve guild." });
+            return;
+          }
+
           for (const ticket of closed) {
             try {
-              const thread = await interaction.guild?.threads.fetch(ticket.threadId);
+              const thread = await guild.threads.fetch(ticket.threadId);
               if (!thread) { notFound++; continue; }
               if (thread.archived) await thread.setArchived(false, "Purge — unarchiving to delete");
               await thread.delete(`Purged by ${interaction.user.tag}`);
