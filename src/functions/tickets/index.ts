@@ -220,7 +220,6 @@ const ticketsManifest: FunctionManifest = {
       name: "tickets",
       config: currentConfig,
       async onLoad(bot: any) {
-        clientRef = bot.client;
         console.log("[tickets] Loaded, admin channel:", currentConfig.adminChannelId);
       },
       async onUnload() {},
@@ -245,6 +244,8 @@ const ticketsManifest: FunctionManifest = {
         if (sub === "create") {
           const subject = interaction.options.getString("subject", true);
           const message = interaction.options.getString("message", true);
+
+          if (!clientRef) clientRef = interaction.client;
 
           await interaction.deferReply({ ephemeral: true });
 
@@ -289,6 +290,8 @@ const ticketsManifest: FunctionManifest = {
             await interaction.reply({ content: "❌ This command can only be used inside a ticket thread.", ephemeral: true });
             return;
           }
+
+          if (!clientRef) clientRef = interaction.client;
 
           const hasRole = interaction.member?.roles?.cache?.has(adminRoleId);
           if (!hasRole) {
