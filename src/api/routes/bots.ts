@@ -45,6 +45,7 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
         id: bot.id,
         name: bot.name,
         clientId: bot.clientId,
+        guildId: bot.guildId || null,
         avatarUrl: avatar,
         enabled: bot.enabled,
         createdAt: bot.createdAt,
@@ -81,6 +82,7 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
             name: { type: "string", minLength: 1, maxLength: 64 },
             token: { type: "string", minLength: 50 },
             clientId: { type: "string", minLength: 10 },
+            guildId: { type: "string" },
             avatarUrl: { type: "string", nullable: true },
           },
           required: ["name", "token", "clientId"],
@@ -115,6 +117,7 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
             name: { type: "string", minLength: 1, maxLength: 64 },
             token: { type: "string", minLength: 50 },
             clientId: { type: "string", minLength: 10 },
+            guildId: { type: "string", nullable: true },
             avatarUrl: { type: "string", nullable: true },
             enabled: { type: "boolean" },
           },
@@ -252,6 +255,86 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
         systemLog.add("error", `Failed to restart bot ${bot.name}: ${err.message}`, `bot:${bot.id}`);
       });
       return { ok: true, status: "starting" };
+    }
+  );
+
+  // Templates
+  fastify.get("/templates", { preHandler: optionalAuth }, async () => {
+    return { templates: configStore.getTemplates() };
+  });
+
+  fastify.post<{ Body: { name: string; description?: string; botId: string } }>(
+    "/templates",
+    { preHandler: requireAdmin },
+    async (request, reply) => {
+      const { name, description, botId } = request.body;
+      if (!name) return reply.code(400).send({ error: "Bad Request", message: "Template name required" });
+
+      const functions = configStore.getBotFunctions(botId);
+      if (functions.length === 0) {
+        return reply.code(400).send({ error: "Bad Request", message: "Bot has no function configs to template" });
+      }
+
+      const template = configStore.createTemplate({
+        name,
+        description,
+        functionConfigs: functions.map((f) => ({
+          functionName: f.functionName,
+          config: f.config,
+          enabled: f.enabled,
+        })),
+      });
+
+      return reply.code(201).send(template);
+    }
+  );
+
+  fastify.post<{ Params: { templateId: string }; Body: { name: string; token: string; clientId: string; guildId?: string } }>(
+    "/from-template/:templateId",
+    { preHandler: requireAdmin },
+    async (request, reply) => {
+      const template = configStore.getTemplate(request.params.templateId);
+      if (!template) {
+        return reply.code(404).send({ error: "Not Found", message: "Template not found" });
+      }
+
+      const { name, token, clientId, guildId } = request.body;
+      if (!name || !token || !clientId) {
+        return reply.code(400).send({ error: "Bad Request", message: "name, token, and clientId are required" });
+      }
+
+      try {
+        const valid = await validateBotToken(token, clientId);
+        if (!valid) {
+          return reply.code(400).send({ error: "Bad Request", message: "Invalid bot token or client ID" });
+        }
+
+        const bot = configStore.createBot({ name, token, clientId, guildId });
+
+        // Apply template function configs to the new bot
+        for (const fc of template.functionConfigs) {
+          configStore.upsertBotFunction(bot.id, fc.functionName, {
+            config: fc.config,
+            enabled: fc.enabled,
+          });
+        }
+
+        return reply.code(201).send({ ...bot, token: maskToken(bot.token) });
+      } catch (error: any) {
+        throw error;
+      }
+    }
+  );
+
+  fastify.delete<{ Params: { id: string } }>(
+    "/templates/:id",
+    { preHandler: requireAdmin },
+    async (request, reply) => {
+      const deleted = configStore.deleteTemplate(request.params.id);
+      if (!deleted) {
+        return reply.code(404).send({ error: "Not Found", message: "Template not found" });
+      }
+      return reply.code(204).send();
     }
   );
 };

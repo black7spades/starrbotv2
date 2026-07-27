@@ -2,13 +2,16 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 type Theme = "light" | "dark" | "system";
+type ViewMode = "table" | "cards";
 
 interface UIState {
   theme: Theme;
+  viewMode: ViewMode;
   sidebarOpen: boolean;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
   toggleSidebar: () => void;
+  toggleViewMode: () => void;
   initTheme: () => void;
 }
 
@@ -39,6 +42,7 @@ export const useUIStore = create<UIState>()(
   persist(
     (set, get) => ({
       theme: "system",
+      viewMode: "table",
       sidebarOpen: true,
 
       toggleTheme: () => set((state) => {
@@ -51,6 +55,7 @@ export const useUIStore = create<UIState>()(
         set({ theme });
       },
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+      toggleViewMode: () => set((state) => ({ viewMode: state.viewMode === "table" ? "cards" : "table" })),
       initTheme: () => {
         applyTheme(get().theme);
         watchSystemTheme();

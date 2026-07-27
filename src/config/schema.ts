@@ -7,6 +7,7 @@ export const UserSchema = z.object({
   id: z.string(),
   username: z.string().min(1),
   passwordHash: z.string(),
+  discordId: z.string().optional(),
   role: UserRole,
   createdAt: z.number().int().positive(),
 });
@@ -15,6 +16,7 @@ export type User = z.infer<typeof UserSchema>;
 export const CreateUserSchema = z.object({
   username: z.string().min(3).max(32).regex(/^[a-zA-Z0-9_-]+$/),
   password: z.string().min(8).max(128),
+  discordId: z.string().optional(),
   role: UserRole.default("viewer"),
 });
 export type CreateUserInput = z.infer<typeof CreateUserSchema>;
@@ -31,6 +33,7 @@ export const BotSchema = z.object({
   name: z.string().min(1).max(64),
   token: z.string().min(1),
   clientId: z.string().min(1),
+  guildId: z.string().optional(),
   avatarUrl: z.string().url().nullable().optional(),
   enabled: z.boolean().default(true),
   createdAt: z.number().int().positive(),
@@ -41,6 +44,7 @@ export const CreateBotSchema = z.object({
   name: z.string().min(1).max(64),
   token: z.string().min(1),
   clientId: z.string().min(1),
+  guildId: z.string().optional(),
   avatarUrl: z.string().url().nullable().optional(),
 });
 export type CreateBotInput = z.infer<typeof CreateBotSchema>;
@@ -49,6 +53,7 @@ export const UpdateBotSchema = z.object({
   name: z.string().min(1).max(64).optional(),
   token: z.string().min(1).optional(),
   clientId: z.string().min(1).optional(),
+  guildId: z.string().nullable().optional(),
   avatarUrl: z.string().url().nullable().optional(),
   enabled: z.boolean().optional(),
 });
@@ -152,6 +157,19 @@ export const LogEntrySchema = z.object({
   level: z.enum(["info", "warn", "error"]).default("info"),
 });
 export type LogEntry = z.infer<typeof LogEntrySchema>;
+
+export const TemplateSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1).max(64),
+  description: z.string().max(256).optional(),
+  functionConfigs: z.array(z.object({
+    functionName: z.string(),
+    config: z.record(z.unknown()),
+    enabled: z.boolean(),
+  })),
+  createdAt: z.number().int().positive(),
+});
+export type BotTemplate = z.infer<typeof TemplateSchema>;
 
 export const TicketLogSchema = z.object({
   ticketId: z.string(),

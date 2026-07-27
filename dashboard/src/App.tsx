@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "./store/authStore";
 import { useUIStore } from "./store/uiStore";
 import Login from "./pages/Login";
+import DiscordCallback from "./pages/DiscordCallback";
 import Dashboard from "./pages/Dashboard";
 import BotDetail from "./pages/BotDetail";
 import FunctionConfig from "./pages/FunctionConfig";
@@ -32,6 +33,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/discord-callback" element={<DiscordCallback />} />
         <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/bots/create" element={<CreateBot />} />

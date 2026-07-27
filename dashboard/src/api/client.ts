@@ -135,6 +135,28 @@ class ApiClient {
     return this.patch("/api/settings", data);
   }
 
+  // Discord OAuth
+  discordAuthUrl() {
+    return `${this.base}/api/auth/discord`;
+  }
+
+  // Templates
+  getTemplates() {
+    return this.get<{ templates: any[] }>("/api/bots/templates");
+  }
+
+  createTemplate(data: { name: string; description?: string; botId: string }) {
+    return this.post<any>("/api/bots/templates", data);
+  }
+
+  createBotFromTemplate(templateId: string, data: { name: string; token: string; clientId: string; guildId?: string }) {
+    return this.post<{ id: string }>(`/api/bots/from-template/${templateId}`, data);
+  }
+
+  deleteTemplate(id: string) {
+    return this.delete(`/api/bots/templates/${id}`);
+  }
+
   // Version
   getVersion() {
     return this.get<{ version: string; buildTime: string; nodeEnv: string }>("/api/version");

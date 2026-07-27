@@ -1,9 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
+import { useUIStore } from "../store/uiStore";
 import { BotCard, BotCardSkeleton } from "../components/BotCard";
+import BotTable from "../components/BotTable";
 
 function DashboardContent() {
+  const { viewMode, toggleViewMode } = useUIStore();
   const { data: botsData, isLoading } = useQuery({
     queryKey: ["bots"],
     queryFn: () => api.getBots(),
@@ -20,9 +23,17 @@ function DashboardContent() {
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <p className="text-discord-muted">Manage your Discord bot fleet</p>
         </div>
-        <Link to="/bots/create" className="btn-primary">
-          + Create Bot
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={toggleViewMode}
+            className="px-3 py-2 text-sm font-medium rounded-lg bg-discord-input border border-discord-border text-discord-text hover:bg-discord-border transition-colors"
+          >
+            {viewMode === "table" ? "🃏 Cards" : "📋 Table"}
+          </button>
+          <Link to="/bots/create" className="btn-primary">
+            + Create Bot
+          </Link>
+        </div>
       </div>
 
       {/* Stats */}
@@ -33,11 +44,15 @@ function DashboardContent() {
         <StatCard label="Errors" value={bots.filter(b => b.status === "error").length} icon="⚠️" />
       </div>
 
-      {/* Bot Grid */}
+      {/* Content */}
       {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => <BotCardSkeleton key={i} />)}
-        </div>
+        viewMode === "table" ? (
+          <div className="bg-discord-card rounded-xl border border-discord-border p-8 text-center text-discord-muted">Loading...</div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => <BotCardSkeleton key={i} />)}
+          </div>
+        )
       ) : bots.length === 0 ? (
         <div className="text-center py-16">
           <div className="text-6xl mb-4">🤖</div>
@@ -47,6 +62,8 @@ function DashboardContent() {
             Create Bot
           </Link>
         </div>
+      ) : viewMode === "table" ? (
+        <BotTable bots={bots} />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {bots.map((bot) => (

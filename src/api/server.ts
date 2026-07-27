@@ -8,6 +8,7 @@ import fastifyStatic from "@fastify/static";
 import path from "path";
 import { configStore } from "config/index";
 import { authRoutes } from "./routes/auth";
+import { discordRoutes } from "./routes/discord";
 import { userRoutes } from "./routes/users";
 import { botRoutes } from "./routes/bots";
 import { functionRoutes } from "./routes/functions";
@@ -102,6 +103,7 @@ export async function createServer(): Promise<FastifyInstance> {
   await server.register(async (fastify) => {
     fastify.addHook("onRequest", optionalAuth);
     await fastify.register(authRoutes, { prefix: "/api/auth" });
+    await fastify.register(discordRoutes, { prefix: "/api/auth" });
   });
 
   await server.register(async (fastify) => {

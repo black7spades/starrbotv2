@@ -2,11 +2,13 @@ import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useUIStore } from "../store/uiStore";
 import { useAuthStore } from "../store/authStore";
+import { useGuildStore } from "../store/guildStore";
 import { api } from "../api/client";
 
 export default function Layout() {
   const { theme, sidebarOpen, toggleSidebar, toggleTheme } = useUIStore();
   const { user, logout } = useAuthStore();
+  const { guilds, selectedGuildId, selectGuild, discordUser } = useGuildStore();
   const navigate = useNavigate();
 
   const { data: botsData } = useQuery({
@@ -81,6 +83,32 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
+
+        {/* Guild selector */}
+        {discordUser ? (
+          <div className="px-2 py-2 border-t border-discord-border shrink-0">
+            <label className="px-2 text-[10px] font-semibold text-discord-muted uppercase tracking-wider">Guild</label>
+            <select
+              value={selectedGuildId ?? ""}
+              onChange={(e) => selectGuild(e.target.value || null)}
+              className="mt-1 w-full bg-discord-input border border-discord-border rounded-lg px-2.5 py-1.5 text-sm text-discord-text truncate focus:outline-none focus:border-discord-accent"
+            >
+              {guilds.map((g) => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div className="px-2 py-2 border-t border-discord-border shrink-0">
+            <a
+              href={api.discordAuthUrl()}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-discord-muted hover:text-discord-text hover:bg-discord-input transition-colors"
+            >
+              <span className="text-lg">🔗</span>
+              <span>Connect Discord</span>
+            </a>
+          </div>
+        )}
 
         {/* Bots list */}
         <div className="flex-1 min-h-0 flex flex-col border-t border-discord-border">

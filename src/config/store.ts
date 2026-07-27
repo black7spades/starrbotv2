@@ -13,6 +13,7 @@ import {
   GlobalSettings,
   RefreshToken,
   BotSummary,
+  BotTemplate,
   TicketLog,
 } from "./schema";
 
@@ -25,6 +26,7 @@ const SETTINGS_FILE = join(DATA_DIR, "settings.json");
 const REFRESH_TOKENS_FILE = join(DATA_DIR, "refresh-tokens.json");
 const POSTED_URLS_FILE = join(DATA_DIR, "posted-urls.json");
 const TICKETS_LOG_FILE = join(DATA_DIR, "tickets-log.json");
+const TEMPLATES_FILE = join(DATA_DIR, "templates.json");
 
 function ensureDataDir(): void {
   if (!existsSync(DATA_DIR)) {
@@ -79,6 +81,11 @@ export class ConfigStore {
     return users.find((u) => u.username === username) || null;
   }
 
+  getUserByDiscordId(discordId: string): User | null {
+    const users = readJson<User[]>(USERS_FILE, []);
+    return users.find((u) => u.discordId === discordId) || null;
+  }
+
   getUserById(id: string): Omit<User, "passwordHash"> | null {
     const users = readJson<User[]>(USERS_FILE, []);
     const user = users.find((u) => u.id === id);
@@ -91,7 +98,14 @@ export class ConfigStore {
     const users = readJson<User[]>(USERS_FILE, []);
     const id = generateId(input.username);
     const now = Date.now();
-    const user: User = { id, username: input.username, passwordHash: input.password, role: input.role, createdAt: now };
+    const user: User = {
+      id,
+      username: input.username,
+      passwordHash: input.password,
+      discordId: input.discordId,
+      role: input.role,
+      createdAt: now,
+    };
     users.push(user);
     writeJson(USERS_FILE, users);
     const { passwordHash, ...rest } = user;
@@ -148,6 +162,7 @@ export class ConfigStore {
     if (updates.name !== undefined) bots[idx].name = updates.name;
     if (updates.token !== undefined) bots[idx].token = updates.token;
     if (updates.clientId !== undefined) bots[idx].clientId = updates.clientId;
+    if (updates.guildId !== undefined) bots[idx].guildId = updates.guildId ?? undefined;
     if (updates.avatarUrl !== undefined) bots[idx].avatarUrl = updates.avatarUrl;
     if (updates.enabled !== undefined) bots[idx].enabled = updates.enabled;
 
@@ -288,6 +303,38 @@ export class ConfigStore {
   getTicketLogs(limit: number = 100): TicketLog[] {
     const tickets = readJson<TicketLog[]>(TICKETS_LOG_FILE, []);
     return tickets.slice(-limit);
+  }
+
+  // Templates
+  getTemplates(): BotTemplate[] {
+    return readJson<BotTemplate[]>(TEMPLATES_FILE, []);
+  }
+
+  getTemplate(id: string): BotTemplate | null {
+    return this.getTemplates().find((t) => t.id === id) || null;
+  }
+
+  createTemplate(input: { name: string; description?: string; functionConfigs: BotTemplate["functionConfigs"] }): BotTemplate {
+    const templates = this.getTemplates();
+    const id = generateId(input.name);
+    const template: BotTemplate = {
+      id,
+      name: input.name,
+      description: input.description,
+      functionConfigs: input.functionConfigs,
+      createdAt: Date.now(),
+    };
+    templates.push(template);
+    writeJson(TEMPLATES_FILE, templates);
+    return template;
+  }
+
+  deleteTemplate(id: string): boolean {
+    const templates = this.getTemplates();
+    const filtered = templates.filter((t) => t.id !== id);
+    if (filtered.length === templates.length) return false;
+    writeJson(TEMPLATES_FILE, filtered);
+    return true;
   }
 
   getBotSummaries(): BotSummary[] {

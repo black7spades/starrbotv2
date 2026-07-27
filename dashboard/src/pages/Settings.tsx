@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { api } from "../api/client";
 import { useAuthStore } from "../store/authStore";
 import { useUIStore } from "../store/uiStore";
+import { useGuildStore } from "../store/guildStore";
 
 export default function Settings() {
   const { user } = useAuthStore();
   const { theme, setTheme } = useUIStore();
+  const { discordUser, guilds, clearDiscord } = useGuildStore();
   const [users, setUsers] = useState<Array<{ id: string; username: string; role: string }>>([]);
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [editingUser, setEditingUser] = useState<string | null>(null);
@@ -80,6 +82,41 @@ export default function Settings() {
             </select>
           </div>
         </div>
+      </section>
+
+      {/* Discord Connection */}
+      <section className="p-6 bg-discord-card rounded-xl border border-discord-border">
+        <h2 className="text-lg font-semibold mb-4">Discord Connection</h2>
+        {discordUser ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              {discordUser.avatar ? (
+                <img src={discordUser.avatar} alt="" className="w-10 h-10 rounded-full" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-discord-accent flex items-center justify-center text-white font-medium">
+                  {discordUser.username.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div>
+                <p className="font-medium">{discordUser.username}</p>
+                <p className="text-sm text-discord-muted">{guilds.length} server{guilds.length !== 1 ? "s" : ""} found</p>
+              </div>
+            </div>
+            <button
+              onClick={() => { if (confirm("Disconnect Discord account?")) clearDiscord(); }}
+              className="px-4 py-2 text-sm font-medium rounded-lg bg-discord-red/10 text-discord-red hover:bg-discord-red/20 transition-colors"
+            >
+              Disconnect
+            </button>
+          </div>
+        ) : (
+          <div>
+            <p className="text-sm text-discord-muted mb-3">Connect your Discord account to detect your servers and manage bots per guild.</p>
+            <a href={api.discordAuthUrl()} className="btn-primary inline-block">
+              Connect Discord
+            </a>
+          </div>
+        )}
       </section>
 
       {/* User Management */}
