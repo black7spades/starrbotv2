@@ -6,6 +6,7 @@ import { systemLog } from "utils/systemLog";
 interface RssSource {
   url: string;
   label: string;
+  enabled: boolean;
 }
 
 function log(level: "info" | "warn" | "error", msg: string) {
@@ -24,13 +25,14 @@ const updatesManifest: FunctionManifest = {
       rsshubUrl: { type: "string", default: "http://rsshub:1200", description: "RSSHub instance URL (local Docker or public, e.g. https://rsshub.servalan.one)" },
       checkInterval: { type: "number", default: 15, minimum: 1, maximum: 1440, description: "Check interval in minutes" },
       channelId: { type: "string", description: "Discord channel ID to post updates" },
-      sources: {
+        sources: {
         type: "array",
         items: {
           type: "object",
           properties: {
             url: { type: "string" },
             label: { type: "string" },
+            enabled: { type: "boolean", default: true },
           },
           required: ["url"],
         },
@@ -142,6 +144,7 @@ const updatesManifest: FunctionManifest = {
       let newItems = 0;
 
       for (const source of sources) {
+        if (source.enabled === false) continue;
         const items = await fetchFeed(source.url);
         for (const item of items) {
           if (configStore.hasPostedUrl(botId, item.link)) continue;
@@ -216,7 +219,7 @@ const updatesManifest: FunctionManifest = {
             await interaction.reply({ content: `⚠️ Source already exists: ${url}`, ephemeral: true });
             return;
           }
-          sources.push({ url, label });
+          sources.push({ url, label, enabled: true });
           persistSources(sources);
           await interaction.reply({ content: `✅ Added source: ${label} (${url})`, ephemeral: true });
         } else if (sub === "remove") {

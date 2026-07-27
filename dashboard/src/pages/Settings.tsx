@@ -145,13 +145,13 @@ export default function Settings() {
                         <>
                           <button
                             onClick={() => { setEditingUser(u.id); setEditRole(u.role as "admin" | "viewer"); setEditPassword(""); }}
-                            className="text-discord-muted hover:text-discord-text text-sm"
+                            className="btn-secondary text-sm"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => deleteUser(u.id)}
-                            className="text-discord-red hover:text-discord-red/80 text-sm"
+                            className="px-3 py-1.5 text-sm font-medium rounded-lg bg-discord-red/10 text-discord-red hover:bg-discord-red/20 transition-colors"
                           >
                             Delete
                           </button>

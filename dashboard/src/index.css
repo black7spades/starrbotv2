@@ -50,6 +50,15 @@ button:disabled {
   cursor: not-allowed;
 }
 
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 text-sm font-medium rounded-lg bg-discord-accent text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply px-4 py-2 text-sm font-medium rounded-lg bg-discord-input text-discord-text border border-discord-border hover:bg-discord-border transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+}
+
 input, select, textarea {
   font-family: inherit;
   font-size: inherit;

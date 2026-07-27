@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { api } from "../api/client";
+import { Slider } from "../components/ui/Slider";
 
 const FunctionConfigSchema = z.object({
   config: z.record(z.string(), z.unknown()).optional(),
@@ -57,7 +58,6 @@ export default function FunctionConfig() {
           });
         }
       } catch {
-        // function not yet configured for this bot — use defaults
         setCurrentConfig(defaults);
         if (defaults) {
           Object.entries(defaults).forEach(([key, value]) => {
@@ -94,7 +94,6 @@ export default function FunctionConfig() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button onClick={() => navigate(-1)} className="p-2 rounded-lg hover:bg-discord-input">
@@ -111,22 +110,36 @@ export default function FunctionConfig() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Config Fields */}
         {Object.keys(configFields).length > 0 && (
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">Configuration</h2>
-            {Object.entries(configFields).map(([key, field]: [string, any]) => (
-              <ConfigField
-                key={key}
-                name={key}
-                field={field}
-                required={requiredFields.includes(key)}
-                value={currentConfig[key]}
-                register={register}
-                errors={errors}
-                disabled={false}
-              />
-            ))}
+            {Object.entries(configFields).map(([key, field]: [string, any]) => {
+              if (field.type === "array") {
+                return (
+                  <SourcesField
+                    key={key}
+                    name={key}
+                    field={field}
+                    value={watch(`config.${key}`) as any[]}
+                    onChange={(val) => setValue(`config.${key}`, val)}
+                  />
+                );
+              }
+              return (
+                <ConfigField
+                  key={key}
+                  name={key}
+                  field={field}
+                  required={requiredFields.includes(key)}
+                  value={currentConfig[key]}
+                  register={register}
+                  watch={watch}
+                  setValue={setValue}
+                  errors={errors}
+                  disabled={false}
+                />
+              );
+            })}
           </div>
         )}
 
@@ -136,7 +149,6 @@ export default function FunctionConfig() {
           </div>
         )}
 
-        {/* Enable Toggle */}
         <div className={`p-4 bg-discord-card rounded-xl border border-discord-border ${!isConfigured ? "opacity-50" : ""}`}>
           <label className={`flex items-center justify-between ${isConfigured ? "cursor-pointer" : "cursor-not-allowed"}`}>
             <div>
@@ -147,16 +159,14 @@ export default function FunctionConfig() {
                   : "Save configuration first to enable this function"}
               </p>
             </div>
-            <input
-              type="checkbox"
-              {...register("enabled")}
+            <Slider
+              checked={watch("enabled") ?? false}
+              onChange={(val) => setValue("enabled", val)}
               disabled={!isConfigured}
-              className="w-5 h-5 rounded border-discord-border text-discord-accent focus:ring-discord-accent disabled:cursor-not-allowed"
             />
           </label>
         </div>
 
-        {/* Actions */}
         <div className="flex justify-end gap-3 pt-4 border-t border-discord-border">
           <button
             type="button"
@@ -174,12 +184,112 @@ export default function FunctionConfig() {
   );
 }
 
+function SourcesField({
+  name,
+  field,
+  value,
+  onChange,
+}: {
+  name: string;
+  field: any;
+  value: any[];
+  onChange: (val: any[]) => void;
+}) {
+  const sources: any[] = Array.isArray(value) ? value : [];
+  const itemFields = field.items?.properties || {};
+
+  const addSource = () => {
+    const newItem: any = {};
+    Object.entries(itemFields).forEach(([key, def]: [string, any]) => {
+      newItem[key] = def.default ?? (def.type === "boolean" ? true : "");
+    });
+    onChange([...sources, newItem]);
+  };
+
+  const removeSource = (index: number) => {
+    onChange(sources.filter((_, i) => i !== index));
+  };
+
+  const updateSource = (index: number, key: string, val: any) => {
+    const updated = sources.map((s, i) => (i === index ? { ...s, [key]: val } : s));
+    onChange(updated);
+  };
+
+  return (
+    <div className="p-4 bg-discord-card rounded-xl border border-discord-border space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h4 className="font-medium">{field.title || name}</h4>
+          {field.description && <p className="text-sm text-discord-muted">{field.description}</p>}
+        </div>
+        <button type="button" onClick={addSource} className="btn-primary text-sm">
+          + Add
+        </button>
+      </div>
+
+      {sources.length === 0 && (
+        <p className="text-sm text-discord-muted text-center py-4">
+          No sources configured. Click + Add to create one.
+        </p>
+      )}
+
+      <div className="space-y-3">
+        {sources.map((source, index) => (
+          <div
+            key={index}
+            className="flex items-center gap-3 p-3 bg-discord-input rounded-lg border border-discord-border"
+          >
+            <div className="flex-1 grid gap-2 sm:grid-cols-2">
+              {itemFields.url && (
+                <input
+                  type="text"
+                  value={source.url || ""}
+                  onChange={(e) => updateSource(index, "url", e.target.value)}
+                  placeholder="Feed URL"
+                  className="w-full px-3 py-2 bg-discord-card border border-discord-border rounded-lg text-discord-text text-sm focus:ring-2 focus:ring-discord-accent focus:border-transparent"
+                />
+              )}
+              {itemFields.label && (
+                <input
+                  type="text"
+                  value={source.label || ""}
+                  onChange={(e) => updateSource(index, "label", e.target.value)}
+                  placeholder="Label"
+                  className="w-full px-3 py-2 bg-discord-card border border-discord-border rounded-lg text-discord-text text-sm focus:ring-2 focus:ring-discord-accent focus:border-transparent"
+                />
+              )}
+            </div>
+            {itemFields.enabled && (
+              <Slider
+                checked={source.enabled !== false}
+                onChange={(val) => updateSource(index, "enabled", val)}
+              />
+            )}
+            <button
+              type="button"
+              onClick={() => removeSource(index)}
+              className="shrink-0 p-1.5 text-discord-red hover:bg-discord-red/10 rounded-lg transition-colors"
+              title="Remove"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ConfigField({
   name,
   field,
   required,
   value,
   register,
+  watch,
+  setValue,
   errors,
   disabled,
 }: {
@@ -188,6 +298,8 @@ function ConfigField({
   required: boolean;
   value: any;
   register: any;
+  watch: any;
+  setValue: any;
   errors: any;
   disabled: boolean;
 }) {
@@ -205,11 +317,10 @@ function ConfigField({
             </h4>
             {field.description && <p className="text-sm text-discord-muted">{field.description}</p>}
           </div>
-          <input
-            type="checkbox"
-            {...register(fieldName)}
+          <Slider
+            checked={watch(fieldName) ?? field.default ?? false}
+            onChange={(val) => setValue(fieldName, val)}
             disabled={disabled}
-            className="w-5 h-5 rounded border-discord-border text-discord-accent focus:ring-discord-accent disabled:opacity-50"
           />
         </label>
       </div>
@@ -267,7 +378,6 @@ function ConfigField({
     );
   }
 
-  // Default to text input
   return (
     <div className="p-4 bg-discord-card rounded-xl border border-discord-border">
       <label className="block">
