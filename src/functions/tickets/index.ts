@@ -339,7 +339,8 @@ const ticketsManifest: FunctionManifest = {
             return m.find((mem: any) => !mem.user.bot && mem.id !== interaction.user.id);
           });
 
-          const submitterId = opener?.id || thread.ownerId;
+          // If opener not found (e.g. creator closed their own ticket), use the closer as fallback
+          const submitterId = opener?.id || interaction.user.id;
           log("info", `close: ticket=${ticketName} opener=${opener?.id || "none"} ownerId=${thread.ownerId} submitter=${submitterId}`);
           if (submitterId) {
             await sendRatingPrompt(thread, submitterId, interaction.user.id);
