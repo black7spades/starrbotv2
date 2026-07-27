@@ -80,9 +80,9 @@ function createBotInstance(botConfig: Bot): ManagedBot {
     const seen = new Set<string>();
     seen.add("help");
 
-    for (const [, instance] of functions) {
-      if (instance.manifest?.commands) {
-        for (const cmd of instance.manifest.commands) {
+    for (const manifest of functionRegistry.getAllManifests()) {
+      if (manifest.commands) {
+        for (const cmd of manifest.commands) {
           if (!seen.has(cmd.name)) {
             seen.add(cmd.name);
             commands.push(cmd);
@@ -231,6 +231,10 @@ function createBotInstance(botConfig: Bot): ManagedBot {
             return;
           }
         }
+        await interaction.reply({
+          content: "This function is not enabled. Enable it in the dashboard first.",
+          ephemeral: true,
+        }).catch(() => {});
       }
     });
 
