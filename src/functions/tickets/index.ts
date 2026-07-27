@@ -6,11 +6,16 @@ import {
   PermissionFlagsBits,
 } from "discord.js";
 import { configStore } from "config/store";
+import { systemLog } from "utils/systemLog";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
 
 const DATA_DIR = join(__dirname, "../../../data");
 const COUNTER_FILE = join(DATA_DIR, "ticket-counter.json");
+
+function log(level: "info" | "warn" | "error", msg: string) {
+  systemLog.add(level, msg, "tickets");
+}
 
 function loadTicketCounter(): number {
   try {
@@ -36,7 +41,7 @@ const ticketsManifest: FunctionManifest = {
   label: "Tickets",
   description: "Support ticket system with Discord threads",
   icon: "🎫",
-  version: "2.1.0",
+  version: "2.2.0",
   configSchema: {
     type: "object",
     properties: {
@@ -82,17 +87,17 @@ const ticketsManifest: FunctionManifest = {
       ratingLabel: string,
     ) {
       const logChannelId = currentConfig.logChannelId as string;
-      console.log(`[tickets] sendLogSummary called: logChannelId="${logChannelId}", clientRef=${!!clientRef}`);
+      log("info", `sendLogSummary: logChannelId="${logChannelId}" clientRef=${!!clientRef}`);
       if (!logChannelId || !clientRef) {
-        console.log("[tickets] sendLogSummary: skipping — missing logChannelId or clientRef");
+        log("warn", "sendLogSummary: skipping — no logChannelId or clientRef");
         return;
       }
 
       try {
         const logChannel = await clientRef.channels.fetch(logChannelId);
-        console.log(`[tickets] sendLogSummary: fetched channel type=${logChannel?.type}, isTextBased=${logChannel?.isTextBased?.()}`);
+        log("info", `sendLogSummary: fetched channel type=${logChannel?.type} textBased=${logChannel?.isTextBased?.()}`);
         if (!logChannel?.isTextBased()) {
-          console.log("[tickets] sendLogSummary: channel not text-based or not found");
+          log("warn", "sendLogSummary: channel not text-based or not found");
           return;
         }
 
@@ -112,13 +117,14 @@ const ticketsManifest: FunctionManifest = {
           .setTimestamp();
 
         await logChannel.send({ embeds: [summaryEmbed] });
-        console.log(`[tickets] sendLogSummary: summary posted to channel ${logChannelId}`);
-      } catch (err) {
-        console.error("[tickets] Failed to send log summary:", err);
+        log("info", `sendLogSummary: posted to ${logChannelId}`);
+      } catch (err: any) {
+        log("error", `sendLogSummary failed: ${err.message}`);
       }
     }
 
     async function sendRatingPrompt(thread: any, submitterId: string, closerId: string) {
+      log("info", `sendRatingPrompt: thread=${thread.id} submitter=${submitterId} closer=${closerId}`);
       const ratingEmbed = new EmbedBuilder()
         .setTitle("Rate Your Experience")
         .setDescription(
@@ -134,6 +140,7 @@ const ticketsManifest: FunctionManifest = {
         .setFooter({ text: "This thread will archive after you rate." });
 
       const ratingMsg = await thread.send({ content: `<@${submitterId}>`, embeds: [ratingEmbed] });
+      log("info", `sendRatingPrompt: rating message sent id=${ratingMsg.id}`);
 
       const emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"];
       for (const emoji of emojis) {
@@ -147,6 +154,7 @@ const ticketsManifest: FunctionManifest = {
       });
 
       collector.on("collect", async (reaction: any) => {
+        log("info", `collector.collect: emoji=${reaction.emoji.name} user=${reaction.users.cache.last()?.id}`);
         const rating = emojis.indexOf(reaction.emoji.name) + 1;
         const ratingLabels = ["", "Unsatisfied", "Not happy", "Okay", "Satisfied", "Overjoyed"];
 
@@ -178,8 +186,9 @@ const ticketsManifest: FunctionManifest = {
           await thread.setLocked(true, "Ticket closed — rated by submitter");
           await thread.members.remove(submitterId, "Ticket closed — access revoked").catch(() => {});
           await thread.setArchived(true, `Rated ${rating}/5 by submitter`);
-        } catch (err) {
-          console.error("[tickets] Failed to archive thread:", err);
+          log("info", `ticket ${ticketId} archived after rating`);
+        } catch (err: any) {
+          log("error", `Failed to archive ticket thread: ${err.message}`);
           await thread.send({
             embeds: [
               new EmbedBuilder()
@@ -191,6 +200,7 @@ const ticketsManifest: FunctionManifest = {
       });
 
       collector.on("end", async (collected: any) => {
+        log("info", `collector.end: collected=${collected.size}`);
         if (collected.size === 0) {
           const ticketIdMatch = thread.name.match(/^(TICKET-\d+)/);
           const ticketId = ticketIdMatch ? ticketIdMatch[1] : thread.name;
@@ -218,8 +228,9 @@ const ticketsManifest: FunctionManifest = {
             await thread.setLocked(true, "Ticket closed — no rating");
             await thread.members.remove(submitterId, "Ticket closed — access revoked").catch(() => {});
             await thread.setArchived(true, "No rating submitted");
-          } catch (err) {
-            console.error("[tickets] Failed to archive thread:", err);
+            log("info", `ticket ${ticketId} archived (no rating)`);
+          } catch (err: any) {
+            log("error", `Failed to archive ticket thread: ${err.message}`);
           }
         }
       });
@@ -229,7 +240,7 @@ const ticketsManifest: FunctionManifest = {
       name: "tickets",
       config: currentConfig,
       async onLoad(bot: any) {
-        console.log("[tickets] Loaded, admin channel:", currentConfig.adminChannelId, "log channel:", currentConfig.logChannelId || "(not set)");
+        log("info", `Loaded — admin=${currentConfig.adminChannelId} log=${currentConfig.logChannelId || "(not set)"}`);
       },
       async onUnload() {},
       async onConfigChange(newConfig: Record<string, unknown>) {
@@ -241,6 +252,8 @@ const ticketsManifest: FunctionManifest = {
         const sub = interaction.options.getSubcommand();
         const channelId = currentConfig.adminChannelId as string;
         const adminRoleId = currentConfig.adminRoleId as string;
+
+        log("info", `handleCommand: ${sub} by ${interaction.user.id} in ${interaction.channelId}`);
 
         if (!channelId || !adminRoleId) {
           await interaction.reply({
@@ -290,6 +303,7 @@ const ticketsManifest: FunctionManifest = {
 
           ticketsCreated++;
 
+          log("info", `ticket ${ticketId} created in thread ${thread.id}`);
           await interaction.editReply({
             content: `✅ Ticket created!\n\n**${ticketId}**: ${subject}\n<#${thread.id}>`,
           });
@@ -326,15 +340,17 @@ const ticketsManifest: FunctionManifest = {
           });
 
           const submitterId = opener?.id || thread.ownerId;
+          log("info", `close: ticket=${ticketName} opener=${opener?.id || "none"} ownerId=${thread.ownerId} submitter=${submitterId}`);
           if (submitterId) {
             await sendRatingPrompt(thread, submitterId, interaction.user.id);
           } else {
+            log("warn", `close: no submitter identified for ${ticketName}`);
             try {
               await thread.setLocked(true, "Closed — could not identify submitter");
               await thread.setArchived(true, "Closed — could not identify submitter");
               await sendLogSummary(ticketName, thread, thread.ownerId || "unknown", interaction.user.id, 0, "No response");
-            } catch (err) {
-              console.error("[tickets] Failed to archive thread:", err);
+            } catch (err: any) {
+              log("error", `Failed to archive thread: ${err.message}`);
             }
           }
         }
