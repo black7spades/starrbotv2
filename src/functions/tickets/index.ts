@@ -82,11 +82,19 @@ const ticketsManifest: FunctionManifest = {
       ratingLabel: string,
     ) {
       const logChannelId = currentConfig.logChannelId as string;
-      if (!logChannelId || !clientRef) return;
+      console.log(`[tickets] sendLogSummary called: logChannelId="${logChannelId}", clientRef=${!!clientRef}`);
+      if (!logChannelId || !clientRef) {
+        console.log("[tickets] sendLogSummary: skipping — missing logChannelId or clientRef");
+        return;
+      }
 
       try {
         const logChannel = await clientRef.channels.fetch(logChannelId);
-        if (!logChannel?.isTextBased()) return;
+        console.log(`[tickets] sendLogSummary: fetched channel type=${logChannel?.type}, isTextBased=${logChannel?.isTextBased?.()}`);
+        if (!logChannel?.isTextBased()) {
+          console.log("[tickets] sendLogSummary: channel not text-based or not found");
+          return;
+        }
 
         const ratingField = rating > 0
           ? { name: "Rating", value: `${"⭐".repeat(rating)} (${rating}/5 — ${ratingLabel})`, inline: true }
@@ -104,6 +112,7 @@ const ticketsManifest: FunctionManifest = {
           .setTimestamp();
 
         await logChannel.send({ embeds: [summaryEmbed] });
+        console.log(`[tickets] sendLogSummary: summary posted to channel ${logChannelId}`);
       } catch (err) {
         console.error("[tickets] Failed to send log summary:", err);
       }
@@ -220,7 +229,7 @@ const ticketsManifest: FunctionManifest = {
       name: "tickets",
       config: currentConfig,
       async onLoad(bot: any) {
-        console.log("[tickets] Loaded, admin channel:", currentConfig.adminChannelId);
+        console.log("[tickets] Loaded, admin channel:", currentConfig.adminChannelId, "log channel:", currentConfig.logChannelId || "(not set)");
       },
       async onUnload() {},
       async onConfigChange(newConfig: Record<string, unknown>) {
