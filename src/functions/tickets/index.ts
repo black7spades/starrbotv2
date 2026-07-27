@@ -4,6 +4,9 @@ import {
   ChannelType,
   EmbedBuilder,
   PermissionFlagsBits,
+  ActionRowBuilder,
+  StringSelectMenuBuilder,
+  ComponentType,
 } from "discord.js";
 import { configStore } from "config/store";
 import { systemLog } from "utils/systemLog";
@@ -142,54 +145,45 @@ const ticketsManifest: FunctionManifest = {
 
     async function sendRatingPrompt(thread: any, submitterId: string, closerId: string) {
       log("info", `sendRatingPrompt: thread=${thread.id} submitter=${submitterId} closer=${closerId}`);
+
+      const select = new StringSelectMenuBuilder()
+        .setCustomId("ticket_rating")
+        .setPlaceholder("Rate your experience")
+        .addOptions(
+          { label: "1 — Unsatisfied", value: "1" },
+          { label: "2 — Not happy", value: "2" },
+          { label: "3 — Okay", value: "3" },
+          { label: "4 — Satisfied", value: "4" },
+          { label: "5 — Overjoyed", value: "5" },
+        );
+
+      const row = new ActionRowBuilder().addComponents(select);
+
       const ratingEmbed = new EmbedBuilder()
         .setTitle("Rate Your Experience")
-        .setDescription(
-          "How satisfied were you with the support you received?\n\n" +
-          "React with a number below:\n" +
-          "1️⃣ — Unsatisfied\n" +
-          "2️⃣ — Not happy\n" +
-          "3️⃣ — Okay\n" +
-          "4️⃣ — Satisfied\n" +
-          "5️⃣ — Overjoyed",
-        )
-        .setColor(0xfee75c)
-        .setFooter({ text: "This thread will archive after you rate." });
+        .setDescription("How satisfied were you with the support you received?\n\nSelect a rating below. This thread will archive after you rate.")
+        .setColor(0xfee75c);
 
-      const ratingMsg = await thread.send({ content: `<@${submitterId}>`, embeds: [ratingEmbed] });
-      log("info", `sendRatingPrompt: rating message sent id=${ratingMsg.id}`);
+      const ratingMsg = await thread.send({
+        content: `<@${submitterId}>`,
+        embeds: [ratingEmbed],
+        components: [row],
+      });
+      log("info", `sendRatingPrompt: dropdown sent id=${ratingMsg.id}`);
 
-      const emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"];
-      for (const emoji of emojis) {
-        await ratingMsg.react(emoji);
-      }
-
-      const collector = ratingMsg.createReactionCollector({
-        filter: (reaction: any, user: any) => user.id === submitterId && !user.bot,
+      const collector = ratingMsg.createMessageComponentCollector({
+        componentType: ComponentType.StringSelect,
+        filter: (i: any) => i.user.id === submitterId,
         max: 1,
         time: 86400000,
       });
 
-      collector.on("collect", async (reaction: any) => {
-        const emojiName = reaction.emoji.name || "";
-        const emojiId = reaction.emoji.id;
-        log("info", `collector.collect: emoji.name="${emojiName}" emoji.id=${emojiId} user=${reaction.users.cache.last()?.id}`);
-
-        let rating = 0;
-        if (emojiId === "1️⃣" || emojiName === "1️⃣" || emojiName === "1") rating = 1;
-        else if (emojiId === "2️⃣" || emojiName === "2️⃣" || emojiName === "2") rating = 2;
-        else if (emojiId === "3️⃣" || emojiName === "3️⃣" || emojiName === "3") rating = 3;
-        else if (emojiId === "4️⃣" || emojiName === "4️⃣" || emojiName === "4") rating = 4;
-        else if (emojiId === "5️⃣" || emojiName === "5️⃣" || emojiName === "5") rating = 5;
-
-        if (rating === 0) {
-          log("warn", `collector.collect: unrecognized emoji "${emojiName}", ignoring`);
-          return;
-        }
-
+      collector.on("collect", async (interaction: any) => {
+        const rating = parseInt(interaction.values[0], 10);
         const ratingLabels = ["", "Unsatisfied", "Not happy", "Okay", "Satisfied", "Overjoyed"];
+        log("info", `collector.collect: rating=${rating} user=${interaction.user.id}`);
 
-        await thread.send({
+        await interaction.reply({
           embeds: [
             new EmbedBuilder()
               .setDescription(`Thank you! Rating: **${rating}/5** — ${ratingLabels[rating]}`)
@@ -210,8 +204,6 @@ const ticketsManifest: FunctionManifest = {
         });
 
         await sendLogSummary(ticketId, thread, submitterId, closerId, rating, ratingLabels[rating]);
-
-        collector.stop();
 
         try {
           await thread.setLocked(true, "Ticket closed — rated by submitter");
