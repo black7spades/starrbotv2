@@ -90,6 +90,14 @@ const ticketsManifest: FunctionManifest = {
       .addSubcommand((sub) =>
         sub.setName("close").setDescription("Close this ticket (admin only)")
       )
+      .addSubcommand((sub) =>
+        sub
+          .setName("purge")
+          .setDescription("Delete closed tickets (admin only)")
+          .addIntegerOption((opt) =>
+            opt.setName("days").setDescription("Only purge tickets closed within the last N days (omit for all)").setMinValue(1)
+          )
+      )
       .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
       .toJSON() as any,
   ],
@@ -378,6 +386,54 @@ const ticketsManifest: FunctionManifest = {
           }
           log("info", `close: ticket=${ticketName} submitter=${submitterId}`);
           await sendRatingPrompt(thread, submitterId, interaction.user.id);
+        } else if (sub === "purge") {
+          const hasRole = interaction.member?.roles?.cache?.has(adminRoleId);
+          if (!hasRole) {
+            await interaction.reply({ content: "❌ Only admins can purge tickets.", ephemeral: true });
+            return;
+          }
+
+          const days = interaction.options.getInteger("days");
+          const cutoff = days ? Date.now() - days * 86400000 : 0;
+
+          await interaction.deferReply({ ephemeral: true });
+
+          const logs = configStore.getTicketLogs(10000);
+          const closed = days
+            ? logs.filter((t) => t.closedAt >= cutoff)
+            : logs;
+
+          if (!closed.length) {
+            await interaction.editReply({ content: days ? `No tickets closed in the last ${days} day(s).` : "No closed tickets found." });
+            return;
+          }
+
+          let deleted = 0;
+          let failed = 0;
+          let notFound = 0;
+
+          for (const ticket of closed) {
+            try {
+              const thread = await interaction.client.channels.fetch(ticket.threadId);
+              if (thread && "delete" in thread) {
+                await thread.delete(`Purged by ${interaction.user.tag}`);
+                deleted++;
+              } else {
+                notFound++;
+              }
+            } catch {
+              failed++;
+            }
+          }
+
+          const parts = [`🗑️ Purge complete:`];
+          if (deleted) parts.push(`**${deleted}** deleted`);
+          if (notFound) parts.push(`**${notFound}** already gone`);
+          if (failed) parts.push(`**${failed}** failed`);
+          parts.push(days ? `(closed within last ${days} day(s))` : "(all closed tickets)");
+
+          await interaction.editReply({ content: parts.join(" — ") });
+          log("info", `purge: deleted=${deleted} notFound=${notFound} failed=${failed} days=${days ?? "all"}`);
         }
       },
       getStats() {
