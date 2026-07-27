@@ -21,8 +21,7 @@ export default function Login() {
   useEffect(() => {
     api.request<{ needsSetup: boolean }>("/api/auth/setup/status").then(r => setNeedsSetup(r.needsSetup)).catch(() => setNeedsSetup(true));
     api.getVersion().then(v => setVersion(v.version)).catch(() => {});
-    // Check if Discord OAuth is configured by trying to load the URL
-    setDiscordConfigured(!!api.discordAuthUrl());
+    api.getDiscordStatus().then(r => setDiscordConfigured(r.configured)).catch(() => setDiscordConfigured(false));
   }, []);
 
   const onSubmit = async (data: { username: string; password: string; confirmPassword?: string }) => {

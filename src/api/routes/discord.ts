@@ -11,6 +11,11 @@ const clientSecret = () => process.env.DISCORD_CLIENT_SECRET || "";
 const redirectUri = (req: any) => `${req.protocol}://${req.host}/api/auth/discord/callback`;
 
 export const discordRoutes: FastifyPluginAsync = async (fastify) => {
+  // Check if Discord OAuth is configured
+  fastify.get("/discord/status", async () => {
+    return { configured: !!(clientId() && clientSecret()) };
+  });
+
   // Start OAuth flow — redirects to Discord
   fastify.get("/discord", async (request, reply) => {
     if (!clientId()) {

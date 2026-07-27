@@ -140,6 +140,10 @@ class ApiClient {
     return `${this.base}/api/auth/discord`;
   }
 
+  getDiscordStatus() {
+    return this.get<{ configured: boolean }>("/api/auth/discord/status");
+  }
+
   // Templates
   getTemplates() {
     return this.get<{ templates: any[] }>("/api/bots/templates");
