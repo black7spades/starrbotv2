@@ -124,7 +124,18 @@ export default function FunctionConfig() {
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">Configuration</h2>
             {Object.entries(configFields).map(([key, field]: [string, any]) => {
-              if (key === "guildId") return null; // rendered as part of ChannelField
+              if (key === "guildId") {
+                if (name === "instagram") {
+                  return (
+                    <GuildSelector
+                      key={key}
+                      value={watch("config.guildId") as string || ""}
+                      onChange={(val) => setValue("config.guildId", val)}
+                    />
+                  );
+                }
+                return null; // rendered as part of ChannelField for other functions
+              }
               if (key === "channelId") {
                 return (
                   <ChannelField
@@ -167,6 +178,62 @@ export default function FunctionConfig() {
                   />
                 );
               }
+              if (key === "cookie" && name === "instagram") {
+                return (
+                  <div key={key}>
+                    <ConfigField
+                      name={key}
+                      field={field}
+                      required={requiredFields.includes(key)}
+                      value={currentConfig[key]}
+                      register={register}
+                      watch={watch}
+                      setValue={setValue}
+                      errors={errors}
+                      disabled={false}
+                    />
+                    <div className="mt-2 px-4 py-3 bg-discord-input rounded-lg border border-discord-border text-sm text-discord-muted space-y-1">
+                      <p className="font-medium text-discord-text">How to get your Instagram cookie:</p>
+                      <ol className="list-decimal list-inside space-y-1">
+                        <li>Open <span className="text-discord-accent">instagram.com</span> in Chrome and log in</li>
+                        <li>Open DevTools (F12) → <span className="text-discord-accent">Network</span> tab</li>
+                        <li>Refresh the page, click any request to <span className="text-discord-accent">instagram.com</span></li>
+                        <li>In the request headers, find <span className="text-discord-accent">Cookie:</span></li>
+                        <li>Copy the <b>entire</b> value (everything after "Cookie:") and paste it above</li>
+                      </ol>
+                      <p className="text-xs text-discord-muted">The cookie should contain <code>sessionid</code>, <code>ds_user_id</code>, <code>csrftoken</code>, and other values. It expires when Instagram forces a re-login.</p>
+      </div>
+    </div>
+  );
+}
+
+function GuildSelector({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+}) {
+  const { guilds } = useGuildStore();
+
+  return (
+    <div className="p-4 bg-discord-card rounded-xl border border-discord-border">
+      <h4 className="font-medium mb-2">Post to channel</h4>
+      <div>
+        <label className="text-sm text-discord-muted mb-1 block">Server</label>
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text text-sm focus:ring-2 focus:ring-discord-accent focus:border-transparent"
+        >
+          <option value="">Select server...</option>
+          {guilds.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+        </select>
+        {guilds.length === 0 && <p className="text-xs text-discord-muted mt-1">No servers found — re-login with Discord</p>}
+      </div>
+    </div>
+  );
+}
               return (
                 <ConfigField
                   key={key}
@@ -614,7 +681,7 @@ function InstagramAccountsField({
           disabled={!guildId || loadingChannels}
           className="px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text text-sm focus:ring-2 focus:ring-discord-accent focus:border-transparent disabled:opacity-50"
         >
-          <option value="">{!guildId ? "Pick server first" : loadingChannels ? "Loading..." : "Select channel"}</option>
+          <option value="">{loadingChannels ? "Loading..." : "Select channel..."}</option>
           {channels.map(c => <option key={c.id} value={c.id}>#{c.name}</option>)}
         </select>
         <div className="flex gap-2">
