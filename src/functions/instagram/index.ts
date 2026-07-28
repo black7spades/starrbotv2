@@ -143,6 +143,10 @@ async function createInstance(config: Record<string, unknown>): Promise<Function
 
   async function checkAllAccounts() {
     if (!igClient || !clientRef) return;
+    if (igClient.isRateLimited()) {
+      log("info", `Instagram rate limited — waiting ${igClient.cooldownRemaining()}s before retry`);
+      return;
+    }
     for (const account of accounts) {
       if (!account.enabled) continue;
       try {

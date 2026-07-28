@@ -41,9 +41,21 @@ export class InstagramAPI {
   private cookieJar: Map<string, string> = new Map();
   private csrfToken: string = "";
   private initialized = false;
+  private cooldownUntil = 0; // timestamp when we can try again
+  private cooldownMs = 5 * 60_000; // start at 5min, doubles on each 429, caps at 2h
 
   constructor(private cookieString: string) {
     this.parseCookies(cookieString);
+  }
+
+  /** Returns true if we're in cooldown from a 429. */
+  isRateLimited(): boolean {
+    return Date.now() < this.cooldownUntil;
+  }
+
+  /** How many seconds until cooldown expires (0 if not limited). */
+  cooldownRemaining(): number {
+    return Math.max(0, Math.ceil((this.cooldownUntil - Date.now()) / 1000));
   }
 
   private parseCookies(raw: string): void {
@@ -103,6 +115,9 @@ export class InstagramAPI {
   }
 
   private async apiGet<T>(endpoint: string): Promise<T> {
+    if (this.isRateLimited()) {
+      throw new Error(`Instagram rate limited — retry in ${this.cooldownRemaining()}s`);
+    }
     await this.init();
     const res = await fetch(`${API_URL}${endpoint}`, {
       headers: {
@@ -118,6 +133,19 @@ export class InstagramAPI {
       },
       signal: AbortSignal.timeout(15000),
     });
+
+    if (res.status === 429) {
+      // Exponential backoff: 5m → 10m → 20m → 40m → 80m → capped at 2h
+      this.cooldownMs = Math.min(this.cooldownMs * 2, 2 * 60 * 60_000);
+      this.cooldownUntil = Date.now() + this.cooldownMs;
+      throw new Error(`Instagram API 429: rate limited — backing off ${Math.round(this.cooldownMs / 60_000)}m`);
+    }
+
+    // Success — reset backoff
+    if (res.ok) {
+      this.cooldownMs = 5 * 60_000;
+      this.cooldownUntil = 0;
+    }
 
     if (!res.ok) {
       throw new Error(`Instagram API ${res.status}: ${res.statusText}`);
