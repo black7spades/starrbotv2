@@ -124,6 +124,15 @@ export default function FunctionConfig() {
             <h2 className="text-lg font-semibold">Configuration</h2>
             {Object.entries(configFields).map(([key, field]: [string, any]) => {
               if (field.type === "array") {
+                if (name === "instagram" && key === "accounts") {
+                  return (
+                    <InstagramAccountsField
+                      key={key}
+                      value={watch(`config.${key}`) as any[]}
+                      onChange={(val) => setValue(`config.${key}`, val)}
+                    />
+                  );
+                }
                 return (
                   <SourcesField
                     key={key}
@@ -521,6 +530,96 @@ function ConfigField({
         />
         {error && <p className="text-discord-red text-sm mt-1">{error.message}</p>}
       </label>
+    </div>
+  );
+}
+
+function InstagramAccountsField({
+  value,
+  onChange,
+}: {
+  value: any[];
+  onChange: (val: any[]) => void;
+}) {
+  const accounts: any[] = Array.isArray(value) ? value : [];
+  const [newUsername, setNewUsername] = useState("");
+  const [newChannelId, setNewChannelId] = useState("");
+  const [newLabel, setNewLabel] = useState("");
+
+  const addAccount = () => {
+    if (!newUsername.trim() || !newChannelId.trim()) return;
+    onChange([...accounts, { username: newUsername.trim(), channelId: newChannelId.trim(), label: newLabel.trim(), enabled: true }]);
+    setNewUsername("");
+    setNewChannelId("");
+    setNewLabel("");
+  };
+
+  const removeAccount = (i: number) => {
+    onChange(accounts.filter((_, idx) => idx !== i));
+  };
+
+  const toggleAccount = (i: number) => {
+    onChange(accounts.map((a, idx) => (idx === i ? { ...a, enabled: !a.enabled } : a)));
+  };
+
+  return (
+    <div className="p-4 bg-discord-card rounded-xl border border-discord-border space-y-4">
+      <div>
+        <h4 className="font-medium flex items-center gap-2">📸 Monitored Accounts</h4>
+        <p className="text-sm text-discord-muted">Instagram accounts to monitor and post new content to Discord</p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        <input
+          type="text"
+          value={newUsername}
+          onChange={(e) => setNewUsername(e.target.value)}
+          placeholder="Instagram username"
+          className="px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text text-sm focus:ring-2 focus:ring-discord-accent focus:border-transparent"
+        />
+        <input
+          type="text"
+          value={newChannelId}
+          onChange={(e) => setNewChannelId(e.target.value)}
+          placeholder="Discord channel ID"
+          className="px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text text-sm focus:ring-2 focus:ring-discord-accent focus:border-transparent"
+        />
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            placeholder="Label (optional)"
+            className="flex-1 px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text text-sm focus:ring-2 focus:ring-discord-accent focus:border-transparent"
+          />
+          <button type="button" onClick={addAccount} disabled={!newUsername.trim() || !newChannelId.trim()} className="btn-primary text-sm">
+            Add
+          </button>
+        </div>
+      </div>
+
+      {accounts.length === 0 && (
+        <p className="text-sm text-discord-muted text-center py-3">No accounts configured. Add one above.</p>
+      )}
+
+      <div className="space-y-2">
+        {accounts.map((account, i) => (
+          <div key={i} className="flex items-center gap-3 p-3 bg-discord-input rounded-lg border border-discord-border">
+            <button type="button" onClick={() => toggleAccount(i)} className={`text-lg ${account.enabled ? "" : "opacity-30"}`}>
+              {account.enabled ? "✅" : "⏸️"}
+            </button>
+            <div className="flex-1 min-w-0">
+              <span className="font-medium text-discord-text">@{account.username}</span>
+              <span className="text-discord-muted mx-2">→</span>
+              <span className="text-sm text-discord-muted">#{account.channelId}</span>
+              {account.label && <span className="text-xs text-discord-muted ml-2">({account.label})</span>}
+            </div>
+            <button type="button" onClick={() => removeAccount(i)} className="text-discord-red hover:text-red-400 text-sm">
+              Remove
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

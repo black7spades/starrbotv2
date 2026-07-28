@@ -5,6 +5,7 @@ import { functionRegistry, registerFunction } from "functions/registry/index";
 import { updatesManifest } from "functions/updates/index";
 import { ticketsManifest } from "functions/tickets/index";
 import { socialsManifest } from "functions/socials/index";
+import { instagramManifest } from "functions/instagram/index";
 import { logger } from "utils/logger";
 
 // Auto-start enabled bots on startup
@@ -29,6 +30,7 @@ async function main(): Promise<void> {
   registerFunction(updatesManifest);
   registerFunction(ticketsManifest);
   registerFunction(socialsManifest);
+  registerFunction(instagramManifest);
   logger.info("Function registry loaded", { functions: functionRegistry.getAllManifests().map(f => f.name) });
 
   // Start API server
