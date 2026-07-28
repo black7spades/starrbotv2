@@ -20,13 +20,14 @@ export const functionRoutes: FastifyPluginAsync = async (fastify: FastifyInstanc
     { preHandler: optionalAuth },
     async (request, reply) => {
       const { rsshubUrl, feedPath } = request.body;
-      if (!rsshubUrl || !feedPath) {
-        return reply.code(400).send({ error: "Bad Request", message: "rsshubUrl and feedPath are required" });
+      if (!feedPath) {
+        return reply.code(400).send({ error: "Bad Request", message: "feedPath is required" });
       }
 
-      const cleanBase = rsshubUrl.replace(/\/+$/, "");
-      const cleanPath = feedPath.replace(/^\/+/, "");
-      const url = `${cleanBase}/${cleanPath}`;
+      // If feedPath is a full URL (e.g. YouTube native RSS), use it directly
+      const url = feedPath.startsWith("http")
+        ? feedPath
+        : `${(rsshubUrl || "").replace(/\/+$/, "")}/${feedPath.replace(/^\/+/, "")}`;
 
       try {
         const res = await fetch(url, { signal: AbortSignal.timeout(10000) });

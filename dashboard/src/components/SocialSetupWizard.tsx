@@ -31,10 +31,15 @@ const PLATFORMS: Platform[] = [
     name: "YouTube",
     icon: "▶️",
     placeholder: "UCBJycsmduvYEL83R_U4JriQ",
-    helpText: "Channel ID (from the channel URL) or username",
+    helpText: "Channel ID (starts with UC, found in channel URL)",
     buildPath: (u) => {
-      if (u.startsWith("UC") && u.length > 20) return `youtube/channel/${u}`;
-      return `youtube/user/${u}`;
+      const id = u.replace(/^@/, "").replace(/^https?:\/\/.*channel\//, "").split(/[/?]/)[0];
+      return `https://www.youtube.com/feeds/videos.xml?channel_id=${id}`;
+    },
+    validate: (u) => {
+      const id = u.replace(/^@/, "").replace(/^https?:\/\/.*channel\//, "").split(/[/?]/)[0];
+      if (!id) return "Channel ID is required";
+      return null;
     },
   },
   {
@@ -226,7 +231,7 @@ export default function SocialSetupWizard({ rsshubUrl, onAdd, onClose }: Props) 
                   <>
                     <div className="inline-block w-8 h-8 border-2 border-discord-accent border-t-transparent rounded-full animate-spin mb-3" />
                     <p className="text-sm text-discord-muted">Testing feed...</p>
-                    <p className="text-xs text-discord-muted/60 mt-1 font-mono">{rsshubUrl}/{feedPath}</p>
+                    <p className="text-xs text-discord-muted/60 mt-1 font-mono break-all">{feedPath.startsWith("http") ? feedPath : `${rsshubUrl}/${feedPath}`}</p>
                   </>
                 ) : testResult?.ok ? (
                   <>
@@ -290,8 +295,8 @@ export default function SocialSetupWizard({ rsshubUrl, onAdd, onClose }: Props) 
                 autoFocus
                 className="w-full px-4 py-3 bg-discord-input border border-discord-border rounded-xl text-discord-text focus:ring-2 focus:ring-discord-accent focus:border-transparent text-lg"
               />
-              <div className="bg-discord-input rounded-lg p-3 text-xs font-mono text-discord-muted">
-                {rsshubUrl}/{feedPath}
+              <div className="bg-discord-input rounded-lg p-3 text-xs font-mono text-discord-muted break-all">
+                {feedPath.startsWith("http") ? feedPath : `${rsshubUrl}/${feedPath}`}
               </div>
               <button
                 onClick={handleAdd}
