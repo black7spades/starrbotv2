@@ -16,9 +16,9 @@ const PLATFORMS: Platform[] = [
     id: "instagram",
     name: "Instagram",
     icon: "📸",
-    placeholder: "natgeo",
-    helpText: "The Instagram username (without @)",
-    buildPath: (u) => `instagram/2/user/${u.replace(/^@/, "")}`,
+    placeholder: "mkittyxoxo",
+    helpText: "Instagram username (uses Picuki viewer, no login required)",
+    buildPath: (u) => `picuki/user/${u.replace(/^@/, "")}`,
     validate: (u) => {
       const clean = u.replace(/^@/, "");
       if (!clean || clean.length < 1) return "Username is required";
@@ -256,15 +256,6 @@ export default function SocialSetupWizard({ rsshubUrl, onAdd, onClose }: Props) 
                     <div className="text-4xl mb-2">❌</div>
                     <p className="font-semibold text-discord-red">Feed failed</p>
                     <p className="text-sm text-discord-muted mt-1">{testResult?.error}</p>
-                    {platform?.id === "instagram" && (
-                      <div className="mt-3 p-3 bg-discord-input rounded-lg text-left text-xs text-discord-muted space-y-1">
-                        <p className="font-medium text-discord-text">Instagram requires a session cookie</p>
-                        <p>1. Log into Instagram in your browser</p>
-                        <p>2. F12 → Application → Cookies → sessionid</p>
-                        <p>3. Set <code className="text-discord-accent">INSTAGRAM_COOKIE</code> in your RSSHub env</p>
-                        <p>4. Restart RSSHub container</p>
-                      </div>
-                    )}
                     <div className="flex gap-2 mt-4">
                       <button onClick={() => { setStep("input"); setTestResult(null); }} className="btn-secondary flex-1">
                         &larr; Try Again
