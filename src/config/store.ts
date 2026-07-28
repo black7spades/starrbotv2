@@ -184,7 +184,8 @@ export class ConfigStore {
   // Bot Functions
   getBotFunctions(botId: string): BotFunction[] {
     const all = readJson<Record<string, BotFunction[]>>(BOT_FUNCTIONS_FILE, {});
-    return all[botId] || [];
+    const registered = new Set(functionRegistry.getAllManifests().map((m) => m.name));
+    return (all[botId] || []).filter((f) => registered.has(f.functionName));
   }
 
   getBotFunction(botId: string, functionName: string): BotFunction | null {
@@ -340,11 +341,8 @@ export class ConfigStore {
 
   getBotSummaries(): BotSummary[] {
     const bots = this.getBots();
-    const registered = new Set(functionRegistry.getAllManifests().map((m) => m.name));
     return bots.map((bot) => {
-      const functions = this.getBotFunctions(bot.id).filter(
-        (f) => registered.has(f.functionName)
-      );
+      const functions = this.getBotFunctions(bot.id);
       return {
         id: bot.id,
         name: bot.name,
