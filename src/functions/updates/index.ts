@@ -70,9 +70,8 @@ const updatesManifest: FunctionManifest = {
       )
       .addSubcommand((sub) =>
         sub
-          .setName("post")
-          .setDescription("Post the latest item from a source to the channel")
-          .addStringOption((opt) => opt.setName("source").setDescription("Source label or URL (omit to pick from list)").setRequired(false))
+          .setName("testpost")
+          .setDescription("Post the latest item from a source to test the connection")
       )
       .addSubcommand((sub) => sub.setName("list").setDescription("List configured RSS sources"))
       .toJSON() as any,
@@ -247,7 +246,7 @@ const updatesManifest: FunctionManifest = {
           }
           const list = sources.map((s, i) => `${i + 1}. **${s.label}** — ${s.url}`).join("\n");
           await interaction.reply({ content: `📋 **Sources:**\n${list}`, ephemeral: true });
-        } else if (sub === "post") {
+        } else if (sub === "testpost") {
           const sources = getSources().filter((s) => s.enabled !== false);
           if (!sources.length) {
             await interaction.reply({ content: "No enabled sources configured.", ephemeral: true });
@@ -259,43 +258,28 @@ const updatesManifest: FunctionManifest = {
             return;
           }
 
-          // If no source specified, show picker via StringSelectMenuBuilder
-          const sourceArg = interaction.options.getString("source");
-          let source: RssSource | undefined;
-          if (sourceArg) {
-            source = sources.find((s) => s.label.toLowerCase() === sourceArg.toLowerCase() || s.url === sourceArg);
-            if (!source) {
-              await interaction.reply({ content: `❌ Source not found: ${sourceArg}`, ephemeral: true });
-              return;
-            }
-          } else {
-            // Show dropdown
-            const { StringSelectMenuBuilder, ActionRowBuilder } = await import("discord.js");
-            const select = new StringSelectMenuBuilder()
-              .setCustomId("updates-post-source")
-              .setPlaceholder("Pick a source to post from")
-              .addOptions(sources.map((s) => ({ label: s.label, value: s.url, description: s.url })));
-            const row = new ActionRowBuilder().addComponents(select);
-            const reply = await interaction.reply({ components: [row], ephemeral: true });
+          const { StringSelectMenuBuilder, ActionRowBuilder } = await import("discord.js");
+          const select = new StringSelectMenuBuilder()
+            .setCustomId("updates-testpost-source")
+            .setPlaceholder("Pick a source")
+            .addOptions(sources.map((s) => ({ label: s.label, value: s.url, description: s.url })));
+          const row = new ActionRowBuilder().addComponents(select);
+          const reply = await interaction.reply({ components: [row], ephemeral: true });
 
-            try {
-              const selected = await reply.awaitMessageComponent({ time: 30_000 });
-              const url = selected.values[0];
-              source = sources.find((s) => s.url === url);
-              await selected.deferUpdate();
-              await interaction.editReply({ content: `🔄 Fetching latest from **${source?.label}**...`, components: [] });
-            } catch {
-              await interaction.editReply({ content: "⏱️ Timed out.", components: [] });
-              return;
-            }
+          let source: RssSource;
+          try {
+            const selected = await reply.awaitMessageComponent({ time: 30_000 });
+            source = sources.find((s) => s.url === selected.values[0])!;
+            await selected.deferUpdate();
+            await interaction.editReply({ content: `🔄 Fetching latest from **${source.label}**...`, components: [] });
+          } catch {
+            await interaction.editReply({ content: "⏱️ Timed out.", components: [] });
+            return;
           }
 
-          if (!source) return;
-
-          await interaction.deferReply({ ephemeral: true });
           const items = await fetchFeed(source.url);
           if (!items.length) {
-            await interaction.editReply({ content: `❌ No items found from **${source.label}**.` });
+            await interaction.editReply({ content: `❌ No items from **${source.label}** — check the feed URL.` });
             return;
           }
 
@@ -314,9 +298,9 @@ const updatesManifest: FunctionManifest = {
               .setFooter({ text: source.label })
               .setTimestamp();
             await channel.send({ embeds: [embed] });
-            await interaction.editReply({ content: `✅ Posted **${item.title}** from ${source.label}` });
+            await interaction.editReply({ content: `✅ Posted **${item.title}**` });
           } catch (e: any) {
-            await interaction.editReply({ content: `❌ Failed: ${e.message}` });
+            await interaction.editReply({ content: `❌ Failed to send: ${e.message}` });
           }
         }
       },
