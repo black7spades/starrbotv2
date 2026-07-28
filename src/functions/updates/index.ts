@@ -68,6 +68,14 @@ const updatesManifest: FunctionManifest = {
           .setDescription("Remove an RSS source")
           .addStringOption((opt) => opt.setName("url").setDescription("RSS feed URL to remove").setRequired(true))
       )
+      .addSubcommand((sub) =>
+        sub
+          .setName("post")
+          .setDescription("Post a message to the updates channel")
+          .addStringOption((opt) => opt.setName("message").setDescription("Message to post").setRequired(true))
+          .addStringOption((opt) => opt.setName("title").setDescription("Embed title (optional)"))
+          .addStringOption((opt) => opt.setName("url").setDescription("Embed link URL (optional)"))
+      )
       .addSubcommand((sub) => sub.setName("list").setDescription("List configured RSS sources"))
       .toJSON() as any,
   ],
@@ -241,6 +249,34 @@ const updatesManifest: FunctionManifest = {
           }
           const list = sources.map((s, i) => `${i + 1}. **${s.label}** — ${s.url}`).join("\n");
           await interaction.reply({ content: `📋 **Sources:**\n${list}`, ephemeral: true });
+        } else if (sub === "post") {
+          const message = interaction.options.getString("message", true);
+          const title = interaction.options.getString("title");
+          const url = interaction.options.getString("url");
+          const channelId = currentConfig.channelId as string;
+          if (!channelId) {
+            await interaction.reply({ content: "❌ No channel configured. Set one in function settings.", ephemeral: true });
+            return;
+          }
+          if (!clientRef) clientRef = interaction.client;
+          await interaction.deferReply({ ephemeral: true });
+          try {
+            const channel = await clientRef.channels.fetch(channelId);
+            if (!channel || !("send" in channel)) {
+              await interaction.editReply({ content: "❌ Channel not found." });
+              return;
+            }
+            const embed = new EmbedBuilder()
+              .setDescription(message)
+              .setColor(0x57f287)
+              .setTimestamp();
+            if (title) embed.setTitle(title);
+            if (url) embed.setURL(url);
+            await channel.send({ embeds: [embed] });
+            await interaction.editReply({ content: "✅ Posted!" });
+          } catch (e: any) {
+            await interaction.editReply({ content: `❌ Failed: ${e.message}` });
+          }
         }
       },
       getStats() {
