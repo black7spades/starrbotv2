@@ -71,10 +71,8 @@ const updatesManifest: FunctionManifest = {
       .addSubcommand((sub) =>
         sub
           .setName("post")
-          .setDescription("Post a message to the updates channel")
-          .addStringOption((opt) => opt.setName("message").setDescription("Message to post").setRequired(true))
-          .addStringOption((opt) => opt.setName("title").setDescription("Embed title (optional)"))
-          .addStringOption((opt) => opt.setName("url").setDescription("Embed link URL (optional)"))
+          .setDescription("Post the latest item from a source to the channel")
+          .addStringOption((opt) => opt.setName("source").setDescription("Source label or URL (omit to pick from list)").setRequired(false))
       )
       .addSubcommand((sub) => sub.setName("list").setDescription("List configured RSS sources"))
       .toJSON() as any,
@@ -250,30 +248,73 @@ const updatesManifest: FunctionManifest = {
           const list = sources.map((s, i) => `${i + 1}. **${s.label}** — ${s.url}`).join("\n");
           await interaction.reply({ content: `📋 **Sources:**\n${list}`, ephemeral: true });
         } else if (sub === "post") {
-          const message = interaction.options.getString("message", true);
-          const title = interaction.options.getString("title");
-          const url = interaction.options.getString("url");
-          const channelId = currentConfig.channelId as string;
-          if (!channelId) {
-            await interaction.reply({ content: "❌ No channel configured. Set one in function settings.", ephemeral: true });
+          const sources = getSources().filter((s) => s.enabled !== false);
+          if (!sources.length) {
+            await interaction.reply({ content: "No enabled sources configured.", ephemeral: true });
             return;
           }
-          if (!clientRef) clientRef = interaction.client;
+          const channelId = currentConfig.channelId as string;
+          if (!channelId) {
+            await interaction.reply({ content: "❌ No channel configured.", ephemeral: true });
+            return;
+          }
+
+          // If no source specified, show picker via StringSelectMenuBuilder
+          const sourceArg = interaction.options.getString("source");
+          let source: RssSource | undefined;
+          if (sourceArg) {
+            source = sources.find((s) => s.label.toLowerCase() === sourceArg.toLowerCase() || s.url === sourceArg);
+            if (!source) {
+              await interaction.reply({ content: `❌ Source not found: ${sourceArg}`, ephemeral: true });
+              return;
+            }
+          } else {
+            // Show dropdown
+            const { StringSelectMenuBuilder, ActionRowBuilder } = await import("discord.js");
+            const select = new StringSelectMenuBuilder()
+              .setCustomId("updates-post-source")
+              .setPlaceholder("Pick a source to post from")
+              .addOptions(sources.map((s) => ({ label: s.label, value: s.url, description: s.url })));
+            const row = new ActionRowBuilder().addComponents(select);
+            const reply = await interaction.reply({ components: [row], ephemeral: true });
+
+            try {
+              const selected = await reply.awaitMessageComponent({ time: 30_000 });
+              const url = selected.values[0];
+              source = sources.find((s) => s.url === url);
+              await selected.deferUpdate();
+              await interaction.editReply({ content: `🔄 Fetching latest from **${source?.label}**...`, components: [] });
+            } catch {
+              await interaction.editReply({ content: "⏱️ Timed out.", components: [] });
+              return;
+            }
+          }
+
+          if (!source) return;
+
           await interaction.deferReply({ ephemeral: true });
+          const items = await fetchFeed(source.url);
+          if (!items.length) {
+            await interaction.editReply({ content: `❌ No items found from **${source.label}**.` });
+            return;
+          }
+
+          const item = items[0];
           try {
-            const channel = await clientRef.channels.fetch(channelId);
+            const channel = await (clientRef || interaction.client).channels.fetch(channelId);
             if (!channel || !("send" in channel)) {
               await interaction.editReply({ content: "❌ Channel not found." });
               return;
             }
             const embed = new EmbedBuilder()
-              .setDescription(message)
+              .setTitle(item.title)
+              .setURL(item.link)
+              .setDescription(item.description || "")
               .setColor(0x57f287)
+              .setFooter({ text: source.label })
               .setTimestamp();
-            if (title) embed.setTitle(title);
-            if (url) embed.setURL(url);
             await channel.send({ embeds: [embed] });
-            await interaction.editReply({ content: "✅ Posted!" });
+            await interaction.editReply({ content: `✅ Posted **${item.title}** from ${source.label}` });
           } catch (e: any) {
             await interaction.editReply({ content: `❌ Failed: ${e.message}` });
           }
