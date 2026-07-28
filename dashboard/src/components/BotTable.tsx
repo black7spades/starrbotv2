@@ -123,15 +123,28 @@ export default function BotTable({ bots }: { bots: BotRow[] }) {
       cell: (info) => {
         const active = info.getValue();
         const all = info.row.original.allFunctions;
+        if (all.length === 0) return <span className="text-sm text-discord-muted">—</span>;
         return (
-          <span className="text-sm">
-            {active.length > 0 ? (
-              <span className="text-discord-green">{active.length}</span>
-            ) : (
-              <span className="text-discord-muted">0</span>
-            )}
-            <span className="text-discord-muted"> / {all.length}</span>
-          </span>
+          <div className="relative group">
+            <span className="text-sm cursor-default">
+              {active.length > 0 ? (
+                <span className="text-discord-green">{active.length}</span>
+              ) : (
+                <span className="text-discord-muted">0</span>
+              )}
+              <span className="text-discord-muted"> / {all.length}</span>
+            </span>
+            <div className="absolute left-0 top-full mt-1 z-30 hidden group-hover:block w-48 p-2 bg-discord-card border border-discord-border rounded-lg shadow-xl">
+              {all.map((fn) => (
+                <div key={fn} className="flex items-center gap-2 py-0.5 text-xs">
+                  <span className={active.includes(fn) ? "text-discord-green" : "text-discord-muted"}>
+                    {active.includes(fn) ? "ON" : "OFF"}
+                  </span>
+                  <span className="text-discord-text truncate">{fn}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         );
       },
       sortingFn: (a, b) => a.original.activeFunctions.length - b.original.activeFunctions.length,

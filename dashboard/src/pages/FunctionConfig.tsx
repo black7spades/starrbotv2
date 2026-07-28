@@ -127,18 +127,19 @@ export default function FunctionConfig() {
               if (key === "guildId") {
                 if (name === "instagram") {
                   return (
-                    <GuildSelector
+                    <PostToChannel
                       key={key}
-                      value={watch("config.guildId") as string || ""}
-                      onChange={(val) => setValue("config.guildId", val)}
+                      botId={botId!}
+                      guildValue={watch("config.guildId") as string || ""}
+                      onGuildChange={(val) => setValue("config.guildId", val)}
                     />
                   );
                 }
-                return null; // rendered as part of ChannelField for other functions
+                return null; // rendered as part of PostToChannel for other functions
               }
               if (key === "channelId") {
                 return (
-                  <ChannelField
+                  <PostToChannel
                     key={key}
                     botId={botId!}
                     guildValue={watch("config.guildId") as string || ""}
@@ -207,33 +208,6 @@ export default function FunctionConfig() {
   );
 }
 
-function GuildSelector({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (val: string) => void;
-}) {
-  const { guilds } = useGuildStore();
-
-  return (
-    <div className="p-4 bg-discord-card rounded-xl border border-discord-border">
-      <h4 className="font-medium mb-2">Post to channel</h4>
-      <div>
-        <label className="text-sm text-discord-muted mb-1 block">Server</label>
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text text-sm focus:ring-2 focus:ring-discord-accent focus:border-transparent"
-        >
-          <option value="">Select server...</option>
-          {guilds.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-        </select>
-        {guilds.length === 0 && <p className="text-xs text-discord-muted mt-1">No servers found — re-login with Discord</p>}
-      </div>
-    </div>
-  );
-}
               return (
                 <ConfigField
                   key={key}
@@ -727,7 +701,7 @@ function InstagramAccountsField({
   );
 }
 
-function ChannelField({
+function PostToChannel({
   botId,
   guildValue,
   channelValue,
@@ -736,9 +710,9 @@ function ChannelField({
 }: {
   botId: string;
   guildValue: string;
-  channelValue: string;
+  channelValue?: string;
   onGuildChange: (val: string) => void;
-  onChannelChange: (val: string) => void;
+  onChannelChange?: (val: string) => void;
 }) {
   const { guilds } = useGuildStore();
   const [channels, setChannels] = useState<{ id: string; name: string }[]>([]);
@@ -756,7 +730,7 @@ function ChannelField({
   return (
     <div className="p-4 bg-discord-card rounded-xl border border-discord-border">
       <h4 className="font-medium mb-2">Post to channel</h4>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className={`grid gap-3 ${onChannelChange ? "sm:grid-cols-2" : ""}`}>
         <div>
           <label className="text-sm text-discord-muted mb-1 block">Server</label>
           <select
@@ -769,18 +743,20 @@ function ChannelField({
           </select>
           {guilds.length === 0 && <p className="text-xs text-discord-muted mt-1">No servers found — re-login with Discord</p>}
         </div>
-        <div>
-          <label className="text-sm text-discord-muted mb-1 block">Channel</label>
-          <select
-            value={channelValue}
-            onChange={(e) => onChannelChange(e.target.value)}
-            disabled={!guildValue || loadingChannels}
-            className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text text-sm focus:ring-2 focus:ring-discord-accent focus:border-transparent disabled:opacity-50"
-          >
-            <option value="">{loadingChannels ? "Loading..." : "Select channel..."}</option>
-            {channels.map(c => <option key={c.id} value={c.id}>#{c.name}</option>)}
-          </select>
-        </div>
+        {onChannelChange && (
+          <div>
+            <label className="text-sm text-discord-muted mb-1 block">Channel</label>
+            <select
+              value={channelValue || ""}
+              onChange={(e) => onChannelChange(e.target.value)}
+              disabled={!guildValue || loadingChannels}
+              className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text text-sm focus:ring-2 focus:ring-discord-accent focus:border-transparent disabled:opacity-50"
+            >
+              <option value="">{loadingChannels ? "Loading..." : "Select channel..."}</option>
+              {channels.map(c => <option key={c.id} value={c.id}>#{c.name}</option>)}
+            </select>
+          </div>
+        )}
       </div>
     </div>
   );
