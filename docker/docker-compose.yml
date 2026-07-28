@@ -48,8 +48,8 @@ services:
     ports:
       - "1200:1200"
     environment:
-      - CACHE_TYPE=memory
-      - INSTAGRAM_COOKIE=datr=UgRWaj9hYl1pPohBnUELvmqR; ig_did=A2BBDC63-9F72-4654-A1BC-315767DA71BD; mid=alYEUgALAAGwoU-TraMeNTYLopXy; ds_user_id=184371779; ps_l=1; ps_n=1; csrftoken=wMNsdC1E30OIw9IWGZnYd5vQzstJ0xOm; sessionid=184371779%3AKt4I2YQGwRVnfZ%3A17%3AAYgH14zF-ezy5a4xa6Ga80eL4Tj7Z6JR2xfJaE_ajw; rur=KND%2C17841401553372880%2C1786406591%3A01ff38dc10e4d6f0847241bd0db39ebcc95d13a14da1093b9c887783a40d74991b0b2965; wd=654x911
+      CACHE_TYPE: "memory"
+      INSTAGRAM_COOKIE: "datr=UgRWaj9hYl1pPohBnUELvmqR; ig_did=A2BBDC63-9F72-4654-A1BC-315767DA71BD; mid=alYEUgALAAGwoU-TraMeNTYLopXy; ds_user_id=184371779; ps_l=1; ps_n=1; csrftoken=wMNsdC1E30OIw9IWGZnYd5vQzstJ0xOm; sessionid=184371779%3AKt4I2YQGwRVnfZ%3A17%3AAYgH14zF-ezy5a4xa6Ga80eL4Tj7Z6JR2xfJaE_ajw; rur=KND%2C17841401553372880%2C1786406591%3A01ff38dc10e4d6f0847241bd0db39ebcc95d13a14da1093b9c887783a40d74991b0b2965; wd=654x911"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:1200/healthz"]
       interval: 30s
