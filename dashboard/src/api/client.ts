@@ -68,6 +68,10 @@ class ApiClient {
     return this.get<any>(`/api/bots/${id}`);
   }
 
+  getChannels(botId: string, guildId: string) {
+    return this.get<{ id: string; name: string; type: number }[]>(`/api/bots/${botId}/guilds/${guildId}/channels`);
+  }
+
   createBot(data: any) {
     return this.post<{ id: string; name: string }>("/api/bots", data);
   }

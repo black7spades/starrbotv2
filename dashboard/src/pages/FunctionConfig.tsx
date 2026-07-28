@@ -6,6 +6,7 @@ import { z } from "zod";
 import { api } from "../api/client";
 import { Slider } from "../components/ui/Slider";
 import SocialSetupWizard from "../components/SocialSetupWizard";
+import { useGuildStore } from "../store/guildStore";
 
 const FunctionConfigSchema = z.object({
   config: z.record(z.string(), z.unknown()).optional(),
@@ -123,11 +124,26 @@ export default function FunctionConfig() {
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">Configuration</h2>
             {Object.entries(configFields).map(([key, field]: [string, any]) => {
+              if (key === "guildId") return null; // rendered as part of ChannelField
+              if (key === "channelId") {
+                return (
+                  <ChannelField
+                    key={key}
+                    botId={botId!}
+                    guildValue={watch("config.guildId") as string || ""}
+                    channelValue={watch("config.channelId") as string || ""}
+                    onGuildChange={(val) => { setValue("config.guildId", val); setValue("config.channelId", ""); }}
+                    onChannelChange={(val) => setValue("config.channelId", val)}
+                  />
+                );
+              }
               if (field.type === "array") {
                 if (name === "instagram" && key === "accounts") {
                   return (
                     <InstagramAccountsField
                       key={key}
+                      botId={botId!}
+                      guildId={watch("config.guildId") as string || ""}
                       value={watch(`config.${key}`) as any[]}
                       onChange={(val) => setValue(`config.${key}`, val)}
                     />
@@ -535,9 +551,13 @@ function ConfigField({
 }
 
 function InstagramAccountsField({
+  botId,
+  guildId,
   value,
   onChange,
 }: {
+  botId: string;
+  guildId: string;
   value: any[];
   onChange: (val: any[]) => void;
 }) {
@@ -545,6 +565,17 @@ function InstagramAccountsField({
   const [newUsername, setNewUsername] = useState("");
   const [newChannelId, setNewChannelId] = useState("");
   const [newLabel, setNewLabel] = useState("");
+  const [channels, setChannels] = useState<{ id: string; name: string }[]>([]);
+  const [loadingChannels, setLoadingChannels] = useState(false);
+
+  useEffect(() => {
+    if (!guildId) { setChannels([]); return; }
+    setLoadingChannels(true);
+    api.getChannels(botId, guildId)
+      .then(setChannels)
+      .catch(() => setChannels([]))
+      .finally(() => setLoadingChannels(false));
+  }, [guildId, botId]);
 
   const addAccount = () => {
     if (!newUsername.trim() || !newChannelId.trim()) return;
@@ -577,13 +608,15 @@ function InstagramAccountsField({
           placeholder="Instagram username"
           className="px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text text-sm focus:ring-2 focus:ring-discord-accent focus:border-transparent"
         />
-        <input
-          type="text"
+        <select
           value={newChannelId}
           onChange={(e) => setNewChannelId(e.target.value)}
-          placeholder="Discord channel ID"
-          className="px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text text-sm focus:ring-2 focus:ring-discord-accent focus:border-transparent"
-        />
+          disabled={!guildId || loadingChannels}
+          className="px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text text-sm focus:ring-2 focus:ring-discord-accent focus:border-transparent disabled:opacity-50"
+        >
+          <option value="">{!guildId ? "Pick server first" : loadingChannels ? "Loading..." : "Select channel"}</option>
+          {channels.map(c => <option key={c.id} value={c.id}>#{c.name}</option>)}
+        </select>
         <div className="flex gap-2">
           <input
             type="text"
@@ -603,22 +636,84 @@ function InstagramAccountsField({
       )}
 
       <div className="space-y-2">
-        {accounts.map((account, i) => (
-          <div key={i} className="flex items-center gap-3 p-3 bg-discord-input rounded-lg border border-discord-border">
-            <button type="button" onClick={() => toggleAccount(i)} className={`text-lg ${account.enabled ? "" : "opacity-30"}`}>
-              {account.enabled ? "✅" : "⏸️"}
-            </button>
-            <div className="flex-1 min-w-0">
-              <span className="font-medium text-discord-text">@{account.username}</span>
-              <span className="text-discord-muted mx-2">→</span>
-              <span className="text-sm text-discord-muted">#{account.channelId}</span>
-              {account.label && <span className="text-xs text-discord-muted ml-2">({account.label})</span>}
+        {accounts.map((account, i) => {
+          const ch = channels.find(c => c.id === account.channelId);
+          return (
+            <div key={i} className="flex items-center gap-3 p-3 bg-discord-input rounded-lg border border-discord-border">
+              <button type="button" onClick={() => toggleAccount(i)} className={`text-lg ${account.enabled ? "" : "opacity-30"}`}>
+                {account.enabled ? "✅" : "⏸️"}
+              </button>
+              <div className="flex-1 min-w-0">
+                <span className="font-medium text-discord-text">@{account.username}</span>
+                <span className="text-discord-muted mx-2">→</span>
+                <span className="text-sm text-discord-muted">#{ch ? ch.name : account.channelId}</span>
+                {account.label && <span className="text-xs text-discord-muted ml-2">({account.label})</span>}
+              </div>
+              <button type="button" onClick={() => removeAccount(i)} className="text-discord-red hover:text-red-400 text-sm">
+                Remove
+              </button>
             </div>
-            <button type="button" onClick={() => removeAccount(i)} className="text-discord-red hover:text-red-400 text-sm">
-              Remove
-            </button>
-          </div>
-        ))}
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ChannelField({
+  botId,
+  guildValue,
+  channelValue,
+  onGuildChange,
+  onChannelChange,
+}: {
+  botId: string;
+  guildValue: string;
+  channelValue: string;
+  onGuildChange: (val: string) => void;
+  onChannelChange: (val: string) => void;
+}) {
+  const { guilds } = useGuildStore();
+  const [channels, setChannels] = useState<{ id: string; name: string }[]>([]);
+  const [loadingChannels, setLoadingChannels] = useState(false);
+
+  useEffect(() => {
+    if (!guildValue) { setChannels([]); return; }
+    setLoadingChannels(true);
+    api.getChannels(botId, guildValue)
+      .then(setChannels)
+      .catch(() => setChannels([]))
+      .finally(() => setLoadingChannels(false));
+  }, [guildValue, botId]);
+
+  return (
+    <div className="p-4 bg-discord-card rounded-xl border border-discord-border">
+      <h4 className="font-medium mb-2">Post to channel</h4>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="text-sm text-discord-muted mb-1 block">Server</label>
+          <select
+            value={guildValue}
+            onChange={(e) => onGuildChange(e.target.value)}
+            className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text text-sm focus:ring-2 focus:ring-discord-accent focus:border-transparent"
+          >
+            <option value="">Select server...</option>
+            {guilds.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+          </select>
+          {guilds.length === 0 && <p className="text-xs text-discord-muted mt-1">No servers found — re-login with Discord</p>}
+        </div>
+        <div>
+          <label className="text-sm text-discord-muted mb-1 block">Channel</label>
+          <select
+            value={channelValue}
+            onChange={(e) => onChannelChange(e.target.value)}
+            disabled={!guildValue || loadingChannels}
+            className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text text-sm focus:ring-2 focus:ring-discord-accent focus:border-transparent disabled:opacity-50"
+          >
+            <option value="">{loadingChannels ? "Loading..." : "Select channel..."}</option>
+            {channels.map(c => <option key={c.id} value={c.id}>#{c.name}</option>)}
+          </select>
+        </div>
       </div>
     </div>
   );

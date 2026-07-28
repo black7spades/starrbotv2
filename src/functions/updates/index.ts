@@ -24,7 +24,8 @@ const updatesManifest: FunctionManifest = {
     properties: {
       rsshubUrl: { type: "string", default: "http://rsshub:1200", description: "RSSHub instance URL (local Docker or public, e.g. https://rsshub.servalan.one)" },
       checkInterval: { type: "number", default: 15, minimum: 1, maximum: 1440, description: "Check interval in minutes" },
-      channelId: { type: "string", description: "Discord channel ID to post updates" },
+      guildId: { type: "string", description: "Discord server to post in" },
+      channelId: { type: "string", description: "Discord channel to post updates" },
         sources: {
         type: "array",
         items: {
@@ -43,6 +44,7 @@ const updatesManifest: FunctionManifest = {
   defaultConfig: {
     rsshubUrl: "http://rsshub:1200",
     checkInterval: 15,
+    guildId: "",
     channelId: "",
     sources: [] as RssSource[],
   },

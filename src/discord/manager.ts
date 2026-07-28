@@ -29,6 +29,7 @@ export interface ManagedBot extends EventEmitter {
   getStats(): BotStats;
   get guildCount(): number;
   get guilds(): { id: string; name: string; memberCount: number; icon: string | null }[];
+  getChannels(guildId: string): { id: string; name: string; type: number }[];
 }
 
 function createBotInstance(botConfig: Bot): ManagedBot {
@@ -388,7 +389,15 @@ function createBotInstance(botConfig: Bot): ManagedBot {
         icon: g.iconURL(),
       }));
     },
-  } as ManagedBot;
+
+    getChannels(guildId: string) {
+      const guild = client.guilds.cache.get(guildId);
+      if (!guild) return [];
+      return Array.from(guild.channels.cache.values())
+        .filter(c => c.type === 0 || c.type === 5) // GUILD_TEXT, GUILD_ANNOUNCEMENT
+        .map(c => ({ id: c.id, name: c.name, type: c.type }));
+    },
+  } as unknown as ManagedBot;
 
   Object.setPrototypeOf(result, Object.getPrototypeOf(emitter));
   return result;

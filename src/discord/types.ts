@@ -47,4 +47,5 @@ export interface ManagedBot extends EventEmitter {
   getStats(): BotStats;
   get guildCount(): number;
   get guilds(): { id: string; name: string; memberCount: number; icon: string | null }[];
+  getChannels(guildId: string): { id: string; name: string; type: number }[];
 }

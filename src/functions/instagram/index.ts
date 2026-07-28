@@ -59,6 +59,7 @@ const instagramManifest: FunctionManifest = {
         type: "string",
         description: "Instagram session cookie string (copy full cookie header from browser)",
       },
+      guildId: { type: "string", description: "Discord server to post in" },
       accounts: {
         type: "array",
         items: {
@@ -77,6 +78,7 @@ const instagramManifest: FunctionManifest = {
   },
   defaultConfig: {
     cookie: "",
+    guildId: "",
     accounts: [] as MonitoredAccount[],
   },
   commands: [

@@ -71,6 +71,16 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
     }
   );
 
+  fastify.get<{ Params: { id: string; guildId: string } }>(
+    "/:id/guilds/:guildId/channels",
+    { preHandler: optionalAuth },
+    async (request, reply) => {
+      const managed = botManager.getBot(request.params.id);
+      if (!managed) return reply.code(404).send({ error: "Bot not running" });
+      return managed.getChannels(request.params.guildId);
+    }
+  );
+
   fastify.post<{ Body: z.infer<typeof CreateBotSchema> }>(
     "/",
     {
