@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from "fs";
 import { join } from "path";
 import { createHash } from "crypto";
+import { functionRegistry } from "functions/registry/index";
 import {
   User,
   CreateUserInput,
@@ -339,8 +340,11 @@ export class ConfigStore {
 
   getBotSummaries(): BotSummary[] {
     const bots = this.getBots();
+    const registered = new Set(functionRegistry.getAllManifests().map((m) => m.name));
     return bots.map((bot) => {
-      const functions = this.getBotFunctions(bot.id);
+      const functions = this.getBotFunctions(bot.id).filter(
+        (f) => registered.has(f.functionName)
+      );
       return {
         id: bot.id,
         name: bot.name,
