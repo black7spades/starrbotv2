@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 import { z } from "zod";
-import { CreateBotSchema, UpdateBotSchema, CreateBotInput, UpdateBotInput } from "config/schema";
+import { CreateBotSchema, UpdateBotSchema } from "config/schema";
 import { configStore } from "config/index";
 import { requireAdmin, optionalAuth } from "auth/middleware";
 import { botManager } from "discord/manager";
@@ -313,26 +313,22 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
         return reply.code(400).send({ error: "Bad Request", message: "name, token, and clientId are required" });
       }
 
-      try {
-        const valid = await validateBotToken(token, clientId);
-        if (!valid) {
-          return reply.code(400).send({ error: "Bad Request", message: "Invalid bot token or client ID" });
-        }
-
-        const bot = configStore.createBot({ name, token, clientId, guildId });
-
-        // Apply template function configs to the new bot
-        for (const fc of template.functionConfigs) {
-          configStore.upsertBotFunction(bot.id, fc.functionName, {
-            config: fc.config,
-            enabled: fc.enabled,
-          });
-        }
-
-        return reply.code(201).send({ ...bot, token: maskToken(bot.token) });
-      } catch (error: any) {
-        throw error;
+      const valid = await validateBotToken(token, clientId);
+      if (!valid) {
+        return reply.code(400).send({ error: "Bad Request", message: "Invalid bot token or client ID" });
       }
+
+      const bot = configStore.createBot({ name, token, clientId, guildId });
+
+      // Apply template function configs to the new bot
+      for (const fc of template.functionConfigs) {
+        configStore.upsertBotFunction(bot.id, fc.functionName, {
+          config: fc.config,
+          enabled: fc.enabled,
+        });
+      }
+
+      return reply.code(201).send({ ...bot, token: maskToken(bot.token) });
     }
   );
 

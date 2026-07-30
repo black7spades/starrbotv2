@@ -38,5 +38,10 @@ data/
 *.sqlite
 *.sqlite3
 
+# Credentials / scratch files that must never be committed
+cookies.txt
+login.json
+*.cookies
+
 # Dashboard build output (if built in repo)
 dashboard/public/

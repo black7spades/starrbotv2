@@ -25,7 +25,7 @@ Instagram requires multiple cookies to serve feeds. You need the **full cookie s
 5. In the **Headers** tab, find `Cookie:` under **Request Headers**
 6. Copy the **entire value** — it looks like this:
    ```
-   ds_user_id=184371779; sessionid=184371779%3A...%3A17%3A...; csrftoken=abc123...; mid=xyz...; ig_did=...; rur=...
+   ds_user_id=<digits>; sessionid=<digits>%3A...%3A...; csrftoken=...; mid=...; ig_did=...; rur=...
    ```
 7. That whole string is what you need
 
@@ -35,12 +35,16 @@ Instagram requires multiple cookies to serve feeds. You need the **full cookie s
 
 ## Step 3: Set the Cookie in Docker
 
-Edit your `docker-compose.yml` and replace the `INSTAGRAM_COOKIE` value with the full cookie string:
+The cookie is a live credential for your Instagram account — treat it like a
+password. Put it in a local `.env` file next to your `docker-compose.yml`
+(`.env` is gitignored) rather than editing the committed compose file:
 
-```yaml
-environment:
-  - INSTAGRAM_COOKIE=ds_user_id=184371779; sessionid=184371779%3A...; csrftoken=abc123...
+```bash
+# .env — never commit this file
+INSTAGRAM_COOKIE=ds_user_id=<your-id>; sessionid=<your-session>; csrftoken=<your-token>
 ```
+
+`docker-compose.yml` already reads it via `INSTAGRAM_COOKIE: ${INSTAGRAM_COOKIE:-}`.
 
 Restart RSSHub:
 

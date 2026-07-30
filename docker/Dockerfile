@@ -27,16 +27,13 @@ WORKDIR /app
 # Build TypeScript
 RUN npm run build
 
-# Copy migrations to dist
-RUN cp -r src/config/migrations dist/config/migrations
-
 # Production stage
 FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Install runtime dependencies (SQLite3 needs these, openssl for secret generation)
-RUN apk add --no-cache sqlite-libs openssl
+# openssl is used by entrypoint.sh to generate secrets when none are supplied
+RUN apk add --no-cache openssl
 
 ARG GIT_HASH=unknown
 ENV GIT_HASH=${GIT_HASH}

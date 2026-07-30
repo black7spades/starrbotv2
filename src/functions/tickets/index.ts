@@ -270,7 +270,7 @@ const ticketsManifest: FunctionManifest = {
     return {
       name: "tickets",
       config: currentConfig,
-      async onLoad(bot: any) {
+      async onLoad(_bot: any) {
         log("info", `Loaded — admin=${currentConfig.adminChannelId} log=${currentConfig.logChannelId || "(not set)"}`);
       },
       async onUnload() {},

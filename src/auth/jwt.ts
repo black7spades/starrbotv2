@@ -1,8 +1,23 @@
-import { sign, verify, SignOptions, VerifyOptions, JwtPayload } from "jsonwebtoken";
+import { sign, verify, SignOptions, VerifyOptions } from "jsonwebtoken";
 import { JWTPayload } from "config/schema";
 
-const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET ?? "dev-access-secret-change-in-production";
-const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET ?? "dev-refresh-secret-change-in-production";
+const DEV_ACCESS_SECRET = "dev-access-secret-change-in-production";
+const DEV_REFRESH_SECRET = "dev-refresh-secret-change-in-production";
+
+const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET ?? DEV_ACCESS_SECRET;
+const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET ?? DEV_REFRESH_SECRET;
+
+// These fallbacks are published in the repo, so anyone could mint a valid
+// admin token against them. Refuse to run with them outside development.
+if (
+  process.env.NODE_ENV === "production" &&
+  (ACCESS_SECRET === DEV_ACCESS_SECRET || REFRESH_SECRET === DEV_REFRESH_SECRET)
+) {
+  throw new Error(
+    "Refusing to start in production with default JWT secrets. " +
+      "Set JWT_ACCESS_SECRET and JWT_REFRESH_SECRET."
+  );
+}
 const ACCESS_EXPIRY = "24h";
 const REFRESH_EXPIRY = "7d";
 

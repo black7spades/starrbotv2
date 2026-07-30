@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "fs";
 import { join } from "path";
 import { createHash } from "crypto";
 import { functionRegistry } from "functions/registry/index";
@@ -47,7 +47,13 @@ function readJson<T>(file: string, defaultValue: T): T {
 
 function writeJson<T>(file: string, data: T): void {
   ensureDataDir();
-  writeFileSync(file, JSON.stringify(data, null, 2));
+  // Write to a temp file in the same directory, then rename. rename(2) is
+  // atomic within a filesystem, so a crash mid-write can't leave a truncated
+  // or half-written JSON file behind (which readJson would silently discard,
+  // taking every bot/user record with it).
+  const tmp = `${file}.${process.pid}.tmp`;
+  writeFileSync(tmp, JSON.stringify(data, null, 2));
+  renameSync(tmp, file);
 }
 
 function generateId(name: string): string {
@@ -282,7 +288,7 @@ export class ConfigStore {
     return createHash("sha256").update(url).digest("hex").slice(0, 32);
   }
 
-  prunePostedUrls(botId: string, maxAge: number = 30 * 24 * 60 * 60 * 1000): number {
+  prunePostedUrls(botId: string, _maxAge: number = 30 * 24 * 60 * 60 * 1000): number {
     // Simple pruning - in JSON we just truncate to 1000 entries
     const all = readJson<Record<string, string[]>>(POSTED_URLS_FILE, {});
     if (all[botId] && all[botId].length > 1000) {

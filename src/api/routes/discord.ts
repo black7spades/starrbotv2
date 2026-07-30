@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync } from "fastify";
 import { configStore } from "config/store";
 import { createSession } from "auth/index";
 import { hashPassword } from "auth/argon2";
@@ -9,7 +9,7 @@ const DISCORD_CDN = "https://cdn.discordapp.com";
 const clientId = () => process.env.DISCORD_CLIENT_ID || "";
 const clientSecret = () => process.env.DISCORD_CLIENT_SECRET || "";
 const baseUrl = () => process.env.BASE_URL || `http://localhost:${process.env.PORT || "2013"}`;
-const redirectUri = (req: any) => `${baseUrl()}/api/auth/discord/callback`;
+const redirectUri = () => `${baseUrl()}/api/auth/discord/callback`;
 
 export const discordRoutes: FastifyPluginAsync = async (fastify) => {
   // Check if Discord OAuth is configured
@@ -25,7 +25,7 @@ export const discordRoutes: FastifyPluginAsync = async (fastify) => {
     const state = Math.random().toString(36).slice(2);
     const params = new URLSearchParams({
       client_id: clientId(),
-      redirect_uri: redirectUri(request),
+      redirect_uri: redirectUri(),
       response_type: "code",
       scope: "identify guilds",
       state,
@@ -47,7 +47,7 @@ export const discordRoutes: FastifyPluginAsync = async (fastify) => {
         client_secret: clientSecret(),
         grant_type: "authorization_code",
         code,
-        redirect_uri: redirectUri(request),
+        redirect_uri: redirectUri(),
       }),
     });
 

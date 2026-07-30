@@ -14,8 +14,9 @@ services:
       - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
       - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET}
       - BASE_URL=${BASE_URL}
-      # Optional: override auto-generated secrets
-      # - JWT_SECRET=your-custom-secret
+      # Optional: override auto-generated secrets. Names must match what the
+      # app/entrypoint read — JWT_ACCESS_SECRET, not JWT_SECRET.
+      # - JWT_ACCESS_SECRET=your-custom-access-secret
       # - JWT_REFRESH_SECRET=your-custom-refresh-secret
       # - COOKIE_SECRET=your-custom-cookie-secret
     depends_on:
@@ -49,7 +50,9 @@ services:
       - "1200:1200"
     environment:
       CACHE_TYPE: "memory"
-      INSTAGRAM_COOKIE: "datr=UgRWaj9hYl1pPohBnUELvmqR; ig_did=A2BBDC63-9F72-4654-A1BC-315767DA71BD; mid=alYEUgALAAGwoU-TraMeNTYLopXy; ds_user_id=184371779; ps_l=1; ps_n=1; csrftoken=wMNsdC1E30OIw9IWGZnYd5vQzstJ0xOm; sessionid=184371779%3AKt4I2YQGwRVnfZ%3A17%3AAYgH14zF-ezy5a4xa6Ga80eL4Tj7Z6JR2xfJaE_ajw; rur=KND%2C17841401553372880%2C1786406591%3A01ff38dc10e4d6f0847241bd0db39ebcc95d13a14da1093b9c887783a40d74991b0b2965; wd=654x911"
+      # Never hardcode this - it is a live Instagram session credential.
+      # Put INSTAGRAM_COOKIE in a local .env file (gitignored) instead.
+      INSTAGRAM_COOKIE: ${INSTAGRAM_COOKIE:-}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:1200/healthz"]
       interval: 30s

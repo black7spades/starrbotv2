@@ -3,7 +3,6 @@ import { hashPassword, verifyPassword, hashToken } from "./argon2";
 import {
   generateAccessToken,
   generateRefreshToken,
-  verifyAccessToken,
   verifyRefreshToken,
 } from "./jwt";
 import type { User, CreateUserInput, UpdateUserInput } from "config/schema";

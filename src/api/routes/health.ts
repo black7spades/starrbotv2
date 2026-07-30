@@ -1,11 +1,12 @@
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 import { configStore } from "config/index";
 import { botManager } from "discord/manager";
+import { execSync } from "child_process";
 import { register } from "utils/metrics";
 
 const gitHash = process.env.GIT_HASH || (() => {
   try {
-    return require("child_process").execSync("git rev-parse --short HEAD", { timeout: 3000 }).toString().trim();
+    return execSync("git rev-parse --short HEAD", { timeout: 3000 }).toString().trim();
   } catch { return "unknown"; }
 })();
 

@@ -2,7 +2,6 @@ import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { LoginSchema, CreateUserSchema } from "config/schema";
 import { authenticateUser, createSession, refreshSession, revokeSession, createUser } from "auth/index";
-import { hashToken } from "auth/argon2";
 import { configStore } from "config/index";
 
 const loginBodySchema = LoginSchema;
@@ -70,6 +69,11 @@ export const authRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =
   fastify.post<{ Body: z.infer<typeof loginBodySchema> }>(
     "/login",
     {
+      config: {
+        // Tighter than the global 100/min: this is the password-guessing
+        // surface, and the global limit allows ~144k attempts per day per IP.
+        rateLimit: { max: 10, timeWindow: "1 minute" },
+      },
       schema: {
         body: {
           type: "object",

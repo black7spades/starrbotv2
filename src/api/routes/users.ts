@@ -1,7 +1,6 @@
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { CreateUserSchema, UpdateUserSchema } from "config/schema";
-import { configStore } from "config/index";
 import { createUser, updateUser, deleteUser, getUserById, getAllUsers } from "auth/index";
 import { requireAdmin } from "auth/middleware";
 

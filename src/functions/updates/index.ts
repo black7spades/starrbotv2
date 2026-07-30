@@ -191,7 +191,7 @@ const updatesManifest: FunctionManifest = {
     return {
       name: "updates",
       config: currentConfig,
-      async onLoad(bot: any) {
+      async onLoad(_bot: any) {
         log("info", `Loaded — channel=${currentConfig.channelId} interval=${currentConfig.checkInterval}m`);
         const interval = (currentConfig.checkInterval as number) || 15;
         checkInterval = setInterval(() => checkFeeds(), interval * 60 * 1000);
