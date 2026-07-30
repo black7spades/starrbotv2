@@ -3,8 +3,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apk add --no-cache python3 make g++
+# No native toolchain needed: nothing in the root or dashboard dependency tree
+# uses node-gyp, so `npm ci` never compiles. (Verified by running both installs
+# with cc/gcc/g++/make/python3 stubbed out.)
 
 ARG GIT_HASH=unknown
 ENV GIT_HASH=${GIT_HASH}
@@ -27,16 +28,13 @@ WORKDIR /app
 # Build TypeScript
 RUN npm run build
 
-# Copy migrations to dist
-RUN cp -r src/config/migrations dist/config/migrations
-
 # Production stage
 FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Install runtime dependencies (SQLite3 needs these, openssl for secret generation)
-RUN apk add --no-cache sqlite-libs openssl
+# openssl is used by entrypoint.sh to generate secrets when none are supplied
+RUN apk add --no-cache openssl
 
 ARG GIT_HASH=unknown
 ENV GIT_HASH=${GIT_HASH}
@@ -64,7 +62,6 @@ RUN mkdir -p /app/data
 EXPOSE 2013
 
 ENV NODE_ENV=production
-ENV REDIS_URL=redis://redis:6379
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["node", "dist/index.js"]

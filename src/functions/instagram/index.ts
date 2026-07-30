@@ -138,7 +138,7 @@ async function createInstance(config: Record<string, unknown>): Promise<Function
       igClient = newCookie ? new InstagramAPI(newCookie) : null;
     },
 
-    async handleCommand(interaction: any, bot: any) {
+    async handleCommand(interaction: any, _bot: any) {
       const sub = interaction.options.getSubcommand();
 
       if (sub === "recent" || sub === "post") {

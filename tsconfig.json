@@ -5,7 +5,7 @@
     "lib": ["ES2022"],
     "outDir": "./dist",
     "rootDir": "./src",
-    "strict": false,
+    "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
@@ -22,14 +22,13 @@
       "@api/*": ["api/*"],
       "@utils/*": ["utils/*"]
     },
+    // Unused locals/params are reported by ESLint's no-unused-vars instead, so
+    // they are not duplicated here.
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noImplicitAny": false,
-    "strictNullChecks": false,
     "emitDeclarationOnly": false,
     "allowJs": true,
     "moduleResolution": "node",
-    "resolveJsonModule": true,
     "types": ["node", "fastify"]
   },
   "include": ["src/**/*"],

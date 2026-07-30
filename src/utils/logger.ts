@@ -1,10 +1,11 @@
 import pino from "pino";
+import { PassThrough } from "stream";
 import { systemLog } from "./systemLog";
 
 const isDev = process.env.NODE_ENV !== "production";
 
 // Simple writable stream that tees pino output into systemLog
-const teeStream = new (require("stream").PassThrough)({
+const teeStream = new PassThrough({
   write(chunk: Buffer, _encoding: BufferEncoding, cb: () => void) {
     try {
       const parsed = JSON.parse(chunk.toString());

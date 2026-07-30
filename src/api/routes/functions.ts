@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { configStore } from "config/index";
-import { getAllManifests, getManifest, createInstance } from "functions/registry/index";
+import { getAllManifests, getManifest } from "functions/registry/index";
 import { requireAdmin, optionalAuth } from "auth/middleware";
 import { botManager } from "discord/manager";
 
@@ -15,9 +15,11 @@ export const functionRoutes: FastifyPluginAsync = async (fastify: FastifyInstanc
     return getAllManifests();
   });
 
+  // Admin-only: this endpoint makes a server-side request to a caller-supplied
+  // URL, so it can be used to reach hosts only the server can see.
   fastify.post<{ Body: { rsshubUrl: string; feedPath: string } }>(
     "/test-feed",
-    { preHandler: optionalAuth },
+    { preHandler: requireAdmin },
     async (request, reply) => {
       const { rsshubUrl, feedPath } = request.body;
       if (!feedPath) {
@@ -28,6 +30,16 @@ export const functionRoutes: FastifyPluginAsync = async (fastify: FastifyInstanc
       const url = feedPath.startsWith("http")
         ? feedPath
         : `${(rsshubUrl || "").replace(/\/+$/, "")}/${feedPath.replace(/^\/+/, "")}`;
+
+      let parsed: URL;
+      try {
+        parsed = new URL(url);
+      } catch {
+        return reply.code(400).send({ error: "Bad Request", message: "Invalid feed URL" });
+      }
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        return reply.code(400).send({ error: "Bad Request", message: "Only http and https URLs are supported" });
+      }
 
       try {
         const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
@@ -48,7 +60,9 @@ export const functionRoutes: FastifyPluginAsync = async (fastify: FastifyInstanc
         }
 
         if (items.length === 0) {
-          return { ok: false, error: "Feed returned 0 items (may need Instagram cookie or invalid URL)", url, raw: text.slice(0, 500) };
+          // Deliberately does not echo the response body — doing so would turn
+          // this diagnostic endpoint into a way to read arbitrary URLs.
+          return { ok: false, error: "Feed returned 0 items (may need Instagram cookie or invalid URL)", url };
         }
 
         return { ok: true, itemCount: items.length, items, url };
@@ -118,7 +132,8 @@ export const functionRoutes: FastifyPluginAsync = async (fastify: FastifyInstanc
         await runtime.reloadFunction(name);
       }
 
-      return { functionName: name, ...updated };
+      // `updated` already carries functionName (same value) — see bots.ts.
+      return updated;
     }
   );
 };

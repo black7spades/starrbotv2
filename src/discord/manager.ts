@@ -228,7 +228,7 @@ function createBotInstance(botConfig: Bot): ManagedBot {
         }
 
         const commandName = interaction.commandName;
-        for (const [name, instance] of functions) {
+        for (const [_name, instance] of functions) {
           if (instance.manifest?.commands?.some((cmd: any) => cmd.name === commandName)) {
             try {
               if (instance.handleCommand) {
@@ -462,9 +462,6 @@ class BotManagerClass extends EventEmitter {
     await this.startBot(config);
   }
 
-  checkRedisConnection(): boolean {
-    return true;
-  }
 }
 
 export const botManager = new BotManagerClass();

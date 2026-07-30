@@ -6,7 +6,6 @@ import swagger from "@fastify/swagger";
 import swaggerUI from "@fastify/swagger-ui";
 import fastifyStatic from "@fastify/static";
 import path from "path";
-import { configStore } from "config/index";
 import { authRoutes } from "./routes/auth";
 import { discordRoutes } from "./routes/discord";
 import { userRoutes } from "./routes/users";
@@ -107,7 +106,12 @@ export async function createServer(): Promise<FastifyInstance> {
   });
 
   await server.register(async (fastify) => {
-    fastify.addHook("onRequest", optionalAuth);
+    // Every route in this group requires a valid session. Individual routes
+    // additionally use `requireAdmin` for writes. Using `optionalAuth` here
+    // left all GET routes readable by anonymous callers — including
+    // /api/bots/:id, which returns per-function config (Instagram session
+    // cookies and similar secrets) in plaintext.
+    fastify.addHook("onRequest", authMiddleware);
 
     await fastify.register(userRoutes, { prefix: "/api/users" });
     await fastify.register(botRoutes, { prefix: "/api/bots" });
@@ -154,12 +158,7 @@ export async function startServer(): Promise<void> {
   }
 }
 
-process.on("SIGTERM", async () => {
-  logger.info("SIGTERM received, shutting down...");
-  process.exit(0);
-});
-
-process.on("SIGINT", async () => {
-  logger.info("SIGINT received, shutting down...");
-  process.exit(0);
-});
+// NOTE: SIGTERM/SIGINT are handled in src/index.ts, which stops each bot and
+// closes the config store before exiting. Handlers used to be registered here
+// too, and because this module is imported first they ran first and called
+// process.exit(0) immediately — pre-empting that graceful shutdown.

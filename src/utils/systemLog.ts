@@ -65,9 +65,12 @@ class SystemLog extends EventEmitter {
 
   getAll(opts: { limit?: number; level?: string; source?: string; since?: number } = {}): LogEntry[] {
     let result = this.entries;
-    if (opts.since) result = result.filter((e) => e.timestamp >= opts.since);
-    if (opts.level) result = result.filter((e) => e.level === opts.level);
-    if (opts.source) result = result.filter((e) => e.source.startsWith(opts.source!));
+    // Bind the narrowed values into locals so the callbacks don't re-widen to
+    // `number | undefined` / `string | undefined`.
+    const { since, level, source } = opts;
+    if (since !== undefined) result = result.filter((e) => e.timestamp >= since);
+    if (level) result = result.filter((e) => e.level === level);
+    if (source) result = result.filter((e) => e.source.startsWith(source));
     return result.slice(-(opts.limit || 500));
   }
 

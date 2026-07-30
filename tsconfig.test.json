@@ -1,0 +1,11 @@
+{
+  // Type-checks the test suite, which the build tsconfig excludes so tests are
+  // never emitted into dist/. vitest transpiles without checking types, so
+  // without this the tests are unchecked.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["src/**/*", "tests/**/*"]
+}
