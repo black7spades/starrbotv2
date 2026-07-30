@@ -1,5 +1,5 @@
 /**
- * Instagram Private API client — hits the same endpoints as instagrapi / RSSHub
+ * Instagram Private API client — hits the same endpoints instagrapi uses.
  * but without any external dependency beyond fetch + tough-cookie.
  */
 

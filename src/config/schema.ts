@@ -10,6 +10,8 @@ export const UserSchema = z.object({
   discordId: z.string().optional(),
   role: UserRole,
   createdAt: z.number().int().positive(),
+  /** Profile image. A data: URI (uploaded) or an https: URL. */
+  avatarUrl: z.string().nullable().optional(),
 });
 export type User = z.infer<typeof UserSchema>;
 
@@ -25,8 +27,22 @@ export const UpdateUserSchema = z.object({
   username: z.string().min(3).max(32).regex(/^[a-zA-Z0-9_-]+$/).optional(),
   password: z.string().min(8).max(128).optional(),
   role: UserRole.optional(),
+  avatarUrl: z.string().nullable().optional(),
 });
 export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
+
+/** What a user may change about their own account (no role escalation). */
+export const UpdateProfileSchema = z.object({
+  username: z.string().min(3).max(32).regex(/^[a-zA-Z0-9_-]+$/).optional(),
+  avatarUrl: z.string().nullable().optional(),
+});
+export type UpdateProfileInput = z.infer<typeof UpdateProfileSchema>;
+
+export const ChangePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8).max(128),
+});
+export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
 
 export const BotSchema = z.object({
   id: z.string(),

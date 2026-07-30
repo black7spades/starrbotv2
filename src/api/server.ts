@@ -14,6 +14,7 @@ import { functionRoutes } from "./routes/functions";
 import { eventRoutes } from "./routes/events";
 import { settingsRoutes } from "./routes/settings";
 import { healthRoutes } from "./routes/health";
+import { twitchRoutes } from "./routes/twitch";
 import { authMiddleware, optionalAuth } from "auth/middleware";
 import { logger } from "utils/logger";
 
@@ -70,6 +71,12 @@ export async function createServer(): Promise<FastifyInstance> {
   });
 
   await server.register(healthRoutes);
+
+  // Twitch EventSub callback. Registered outside the authenticated groups on
+  // purpose: Twitch cannot present a session, so the route authenticates each
+  // request by HMAC signature instead. It gets its own encapsulated scope so
+  // its raw-body parser does not affect any other route.
+  await server.register(twitchRoutes, { prefix: "/api/twitch" });
 
   const publicDir = path.join(__dirname, "..", "..", "public");
   await server.register(fastifyStatic, {

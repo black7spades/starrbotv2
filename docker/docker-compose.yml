@@ -13,6 +13,9 @@ services:
       - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
       - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET}
       - BASE_URL=${BASE_URL}
+      # Twitch go-live announcements — see docs/twitch-setup.md
+      - TWITCH_CLIENT_ID=${TWITCH_CLIENT_ID:-}
+      - TWITCH_CLIENT_SECRET=${TWITCH_CLIENT_SECRET:-}
       # Optional: override auto-generated secrets. Names must match what the
       # app/entrypoint read — JWT_ACCESS_SECRET, not JWT_SECRET.
       # - JWT_ACCESS_SECRET=your-custom-access-secret
@@ -24,25 +27,6 @@ services:
       - "dockhand.enable=true"
       - "dockhand.name=StarrBot v2"
 
-  rsshub:
-    image: diygod/rsshub:chromium-bundled
-    container_name: starrbot-rsshub
-    restart: unless-stopped
-    ports:
-      - "1200:1200"
-    environment:
-      CACHE_TYPE: "memory"
-      # Never hardcode this - it is a live Instagram session credential.
-      # Put INSTAGRAM_COOKIE in a local .env file (gitignored) instead.
-      INSTAGRAM_COOKIE: ${INSTAGRAM_COOKIE:-}
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:1200/healthz"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-    networks:
-      - starrbot-network
 
 networks:
   starrbot-network:

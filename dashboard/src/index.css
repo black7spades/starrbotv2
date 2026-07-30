@@ -1,3 +1,5 @@
+@import "./styles/themes.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,40 +10,63 @@
   box-sizing: border-box;
 }
 
-:root {
-  --discord-bg: #f2f3f5;
-  --discord-card: #ffffff;
-  --discord-accent: #5865f2;
-  --discord-green: #57f287;
-  --discord-red: #ed4245;
-  --discord-text: #2e3338;
-  --discord-muted: #747f8d;
-  --discord-input: #e3e5e8;
-  --discord-border: #e3e5e8;
-}
-
-.dark {
-  --discord-bg: #1a1a2e;
-  --discord-card: #16213e;
-  --discord-accent: #5865f2;
-  --discord-green: #57f287;
-  --discord-red: #ed4245;
-  --discord-text: #dcddde;
-  --discord-muted: #72767d;
-  --discord-input: #2f3136;
-  --discord-border: #202225;
-}
-
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: var(--discord-bg);
-  color: var(--discord-text);
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+  background: var(--bg-base);
+  color: var(--text);
   min-height: 100vh;
-  transition: background 0.15s, color 0.15s;
+  transition: background-color 0.35s ease, color 0.35s ease;
+  -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * The ambient wash the glass panels sit on. Three soft radial gradients in the
+ * theme's accent colours, fixed to the viewport so panels appear to float over
+ * a lit surface rather than a flat fill. Without something behind them, frosted
+ * glass just reads as grey.
+ */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(60rem 60rem at 12% -10%, var(--bg-glow-a), transparent 60%),
+    radial-gradient(50rem 50rem at 100% 0%, var(--bg-glow-b), transparent 55%),
+    radial-gradient(45rem 45rem at 50% 110%, var(--bg-glow-c), transparent 60%);
+  transition: background 0.35s ease;
+  pointer-events: none;
+}
+
+/*
+ * A very faint scanline field — the one overtly nostalgic flourish. Kept at 3%
+ * so it reads as texture rather than a CRT costume, and dropped entirely for
+ * anyone who has asked for reduced motion or high contrast.
+ */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.03) 0px,
+    rgba(0, 0, 0, 0.03) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  pointer-events: none;
+}
+
+@media (prefers-contrast: more), (prefers-reduced-motion: reduce) {
+  body::after {
+    display: none;
+  }
 }
 
 a {
-  color: var(--discord-accent);
+  color: var(--accent);
   text-decoration: none;
 }
 
@@ -50,34 +75,172 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* Focus is always visible and always themed — never removed. */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
 @layer components {
-  .btn-primary {
-    @apply px-4 py-2 text-sm font-medium rounded-lg bg-discord-accent text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed;
+  /*
+   * The core glass surface. `backdrop-filter` is what makes it glass; the inset
+   * highlight is what keeps it from looking like flat translucent plastic.
+   */
+  .glass {
+    background: var(--surface);
+    backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.14);
   }
+
+  .glass-strong {
+    background: var(--surface-strong);
+    backdrop-filter: blur(var(--glass-blur-strong)) saturate(160%);
+    -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(160%);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.24),
+      inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  }
+
+  .glass-panel {
+    @apply glass;
+    padding: 1.25rem;
+  }
+
+  .glass-hover {
+    transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+  }
+  .glass-hover:hover {
+    background: var(--surface-hover);
+    border-color: var(--border-strong);
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium;
+    border-radius: var(--radius-sm);
+    transition: transform 0.12s ease, background-color 0.18s ease, border-color 0.18s ease,
+      opacity 0.18s ease;
+  }
+  .btn:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  .btn-primary {
+    @apply btn;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    border: 1px solid transparent;
+  }
+  .btn-primary:hover:not(:disabled) {
+    filter: brightness(1.1);
+  }
+
   .btn-secondary {
-    @apply px-4 py-2 text-sm font-medium rounded-lg bg-discord-input text-discord-text border border-discord-border hover:bg-discord-border transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply btn;
+    background: var(--surface-strong);
+    color: var(--text);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--surface-hover);
+    border-color: var(--border-strong);
+  }
+
+  .btn-ghost {
+    @apply btn;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid transparent;
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--surface);
+    color: var(--text);
+  }
+
+  .btn-danger {
+    @apply btn;
+    background: transparent;
+    color: var(--status-error);
+    border: 1px solid var(--border);
+  }
+  .btn-danger:hover:not(:disabled) {
+    background: var(--surface-hover);
+    border-color: var(--status-error);
+  }
+
+  .field {
+    @apply w-full px-3 py-2 text-sm;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    transition: border-color 0.18s ease, background-color 0.18s ease;
+  }
+  .field::placeholder {
+    color: var(--text-faint);
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: var(--surface-strong);
+  }
+
+  .label {
+    @apply block text-xs font-semibold mb-1.5 uppercase tracking-wider;
+    color: var(--text-muted);
+  }
+
+  /*
+   * Section titles and numeric readouts use a monospace face. It is the one
+   * place the C64 heritage shows up in typography without hurting legibility
+   * of body copy.
+   */
+  .display {
+    font-family: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, Consolas, monospace;
+    letter-spacing: 0.02em;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium;
+    border-radius: 999px;
+    background: var(--surface-strong);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
   }
 }
 
-input, select, textarea {
+input,
+select,
+textarea {
   font-family: inherit;
   font-size: inherit;
 }
 
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
-
 ::-webkit-scrollbar-track {
-  background: var(--discord-bg);
+  background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: var(--discord-border);
-  border-radius: 4px;
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--discord-muted);
+  background: var(--text-faint);
+  background-clip: content-box;
 }

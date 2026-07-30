@@ -6,6 +6,7 @@ interface JWTPayload {
   id: string;
   username: string;
   role: "admin" | "viewer";
+  avatarUrl?: string | null;
 }
 
 interface AuthState {
@@ -14,6 +15,8 @@ interface AuthState {
   initAuth: () => Promise<void>;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Applies a profile change returned by the API to the cached session. */
+  setUser: (user: JWTPayload) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -40,6 +43,8 @@ export const useAuthStore = create<AuthState>()(
         await api.logout();
         set({ user: null });
       },
+
+      setUser: (user: JWTPayload) => set({ user }),
     }),
     {
       name: "auth-storage",

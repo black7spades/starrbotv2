@@ -72,6 +72,35 @@ export async function updateUser(id: string, input: UpdateUserInput): Promise<Om
   return configStore.updateUser(id, updates);
 }
 
+/**
+ * Changes a user's own password after verifying the current one.
+ *
+ * Returns false on a wrong current password rather than throwing, so callers
+ * answer with 400 instead of leaking the difference between "no such user" and
+ * "wrong password".
+ */
+export async function changeOwnPassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+): Promise<boolean> {
+  const record = configStore.getUsers().find((u) => u.id === userId);
+  if (!record) return false;
+
+  const full = configStore.getUserByUsername(record.username);
+  if (!full) return false;
+
+  const valid = await verifyPassword(currentPassword, full.passwordHash);
+  if (!valid) return false;
+
+  const passwordHash = await hashPassword(newPassword);
+  configStore.updateUser(userId, { password: passwordHash });
+
+  // Any session minted with the old password is no longer trustworthy.
+  configStore.revokeAllUserRefreshTokens(userId);
+  return true;
+}
+
 export function getUserById(id: string): Omit<User, "passwordHash"> | null {
   return configStore.getUserById(id);
 }

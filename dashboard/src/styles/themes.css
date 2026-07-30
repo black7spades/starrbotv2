@@ -1,0 +1,211 @@
+/*
+ * StarrBot theme system.
+ *
+ * Every colour in the UI comes from the Commodore 64 VIC-II palette (the Pepto
+ * values, which are the closest match to real hardware output). The palette is
+ * declared once as --c64-* and never used directly by components; each theme
+ * maps those 16 colours onto semantic tokens, so a component only ever asks for
+ * --surface or --accent and gets something the theme has vetted.
+ *
+ * Themes are selected with two independent attributes on <html>:
+ *   data-theme = baby-pink | midnight-blue | emerald-tears
+ *   data-mode  = light | dark
+ *
+ * That split is deliberate: the preset chooses the hue family, the mode chooses
+ * the value range, and the two combine into six looks without six copies of
+ * every rule.
+ */
+
+:root {
+  /* ---- Commodore 64 palette (Pepto) ---- */
+  --c64-black: #000000;
+  --c64-white: #ffffff;
+  --c64-red: #880000;
+  --c64-cyan: #aaffee;
+  --c64-purple: #cc44cc;
+  --c64-green: #00cc55;
+  --c64-blue: #0000aa;
+  --c64-yellow: #eeee77;
+  --c64-orange: #dd8855;
+  --c64-brown: #664400;
+  --c64-light-red: #ff7777;
+  --c64-dark-grey: #333333;
+  --c64-grey: #777777;
+  --c64-light-green: #aaff66;
+  --c64-light-blue: #0088ff;
+  --c64-light-grey: #bbbbbb;
+
+  /* ---- Glass geometry, shared by every theme ---- */
+  --glass-blur: 16px;
+  --glass-blur-strong: 24px;
+  --radius: 14px;
+  --radius-lg: 20px;
+  --radius-sm: 9px;
+
+  /* Status colours are palette-fixed: a running bot should read the same green
+     regardless of which preset is active. */
+  --status-running: var(--c64-green);
+  --status-error: var(--c64-light-red);
+  --status-starting: var(--c64-yellow);
+  --status-stopped: var(--c64-grey);
+
+  color-scheme: dark;
+}
+
+/* ==========================================================================
+   Baby Pink — purple/light-red family
+   ========================================================================== */
+
+[data-theme="baby-pink"][data-mode="dark"] {
+  --bg-base: #1a0d1a;
+  --bg-glow-a: rgba(204, 68, 204, 0.34);
+  --bg-glow-b: rgba(255, 119, 119, 0.24);
+  --bg-glow-c: rgba(170, 255, 238, 0.12);
+
+  --surface: rgba(255, 214, 240, 0.07);
+  --surface-strong: rgba(255, 214, 240, 0.12);
+  --surface-hover: rgba(255, 214, 240, 0.15);
+  --surface-solid: #2a1528;
+  --border: rgba(255, 180, 220, 0.2);
+  --border-strong: rgba(255, 180, 220, 0.36);
+
+  --text: #ffe8f6;
+  --text-muted: #d3a8c6;
+  --text-faint: #9c7a92;
+
+  --accent: var(--c64-purple);
+  --accent-soft: var(--c64-light-red);
+  --accent-contrast: #ffffff;
+  --ring: rgba(204, 68, 204, 0.55);
+}
+
+[data-theme="baby-pink"][data-mode="light"] {
+  --bg-base: #fdf2f9;
+  --bg-glow-a: rgba(204, 68, 204, 0.2);
+  --bg-glow-b: rgba(255, 119, 119, 0.18);
+  --bg-glow-c: rgba(170, 255, 238, 0.22);
+
+  --surface: rgba(255, 255, 255, 0.6);
+  --surface-strong: rgba(255, 255, 255, 0.78);
+  --surface-hover: rgba(255, 255, 255, 0.9);
+  --surface-solid: #ffffff;
+  --border: rgba(160, 60, 140, 0.18);
+  --border-strong: rgba(160, 60, 140, 0.32);
+
+  --text: #3d1235;
+  --text-muted: #7c4a70;
+  --text-faint: #a67c9c;
+
+  --accent: #a3239f;
+  --accent-soft: #d64f6a;
+  --accent-contrast: #ffffff;
+  --ring: rgba(163, 35, 159, 0.4);
+}
+
+/* ==========================================================================
+   Midnight Blue — blue/light-blue family
+   ========================================================================== */
+
+[data-theme="midnight-blue"][data-mode="dark"] {
+  --bg-base: #05061c;
+  --bg-glow-a: rgba(0, 136, 255, 0.32);
+  --bg-glow-b: rgba(0, 0, 170, 0.42);
+  --bg-glow-c: rgba(170, 255, 238, 0.12);
+
+  --surface: rgba(180, 214, 255, 0.07);
+  --surface-strong: rgba(180, 214, 255, 0.12);
+  --surface-hover: rgba(180, 214, 255, 0.16);
+  --surface-solid: #0d1330;
+  --border: rgba(150, 200, 255, 0.2);
+  --border-strong: rgba(150, 200, 255, 0.38);
+
+  --text: #e6f1ff;
+  --text-muted: #9fb6d4;
+  --text-faint: #6b809c;
+
+  --accent: var(--c64-light-blue);
+  --accent-soft: var(--c64-cyan);
+  --accent-contrast: #04122b;
+  --ring: rgba(0, 136, 255, 0.55);
+}
+
+[data-theme="midnight-blue"][data-mode="light"] {
+  --bg-base: #eef4fd;
+  --bg-glow-a: rgba(0, 136, 255, 0.22);
+  --bg-glow-b: rgba(0, 0, 170, 0.14);
+  --bg-glow-c: rgba(170, 255, 238, 0.28);
+
+  --surface: rgba(255, 255, 255, 0.62);
+  --surface-strong: rgba(255, 255, 255, 0.8);
+  --surface-hover: rgba(255, 255, 255, 0.92);
+  --surface-solid: #ffffff;
+  --border: rgba(20, 60, 130, 0.16);
+  --border-strong: rgba(20, 60, 130, 0.3);
+
+  --text: #0a1c3d;
+  --text-muted: #41608c;
+  --text-faint: #7189ab;
+
+  --accent: #0b5fd0;
+  --accent-soft: #0a8ea8;
+  --accent-contrast: #ffffff;
+  --ring: rgba(11, 95, 208, 0.4);
+}
+
+/* ==========================================================================
+   Emerald Tears — green/cyan family
+   ========================================================================== */
+
+[data-theme="emerald-tears"][data-mode="dark"] {
+  --bg-base: #04160f;
+  --bg-glow-a: rgba(0, 204, 85, 0.28);
+  --bg-glow-b: rgba(170, 255, 238, 0.2);
+  --bg-glow-c: rgba(170, 255, 102, 0.16);
+
+  --surface: rgba(180, 255, 220, 0.07);
+  --surface-strong: rgba(180, 255, 220, 0.12);
+  --surface-hover: rgba(180, 255, 220, 0.16);
+  --surface-solid: #0a2419;
+  --border: rgba(140, 255, 200, 0.2);
+  --border-strong: rgba(140, 255, 200, 0.38);
+
+  --text: #e2fff2;
+  --text-muted: #93c9b0;
+  --text-faint: #648b7a;
+
+  --accent: var(--c64-green);
+  --accent-soft: var(--c64-cyan);
+  --accent-contrast: #02170e;
+  --ring: rgba(0, 204, 85, 0.5);
+}
+
+[data-theme="emerald-tears"][data-mode="light"] {
+  --bg-base: #eefaf3;
+  --bg-glow-a: rgba(0, 204, 85, 0.2);
+  --bg-glow-b: rgba(170, 255, 238, 0.34);
+  --bg-glow-c: rgba(170, 255, 102, 0.22);
+
+  --surface: rgba(255, 255, 255, 0.62);
+  --surface-strong: rgba(255, 255, 255, 0.8);
+  --surface-hover: rgba(255, 255, 255, 0.92);
+  --surface-solid: #ffffff;
+  --border: rgba(10, 90, 60, 0.16);
+  --border-strong: rgba(10, 90, 60, 0.3);
+
+  --text: #04301f;
+  --text-muted: #2f6b52;
+  --text-faint: #5d8f78;
+
+  --accent: #0a7d43;
+  --accent-soft: #0d8f86;
+  --accent-contrast: #ffffff;
+  --ring: rgba(10, 125, 67, 0.4);
+}
+
+/* Let the browser style scrollbars and form controls to match the mode. */
+[data-mode="light"] {
+  color-scheme: light;
+}
+[data-mode="dark"] {
+  color-scheme: dark;
+}
