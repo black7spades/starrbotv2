@@ -10,7 +10,7 @@ import FunctionConfig from "./pages/FunctionConfig";
 import CreateBot from "./pages/CreateBot";
 import EditBot from "./pages/EditBot";
 import Settings from "./pages/Settings";
-import Functions from "./pages/Functions";
+import Playground from "./pages/Playground";
 import Logs from "./pages/Logs";
 import Layout from "./components/Layout";
 
@@ -38,7 +38,9 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/bots/create" element={<CreateBot />} />
           <Route path="/bots/:id/edit" element={<EditBot />} />
-          <Route path="/functions" element={<Functions />} />
+          <Route path="/playground" element={<Playground />} />
+          {/* Old entry point; the Playground replaces it. */}
+          <Route path="/functions" element={<Navigate to="/playground" replace />} />
           <Route path="/logs" element={<Logs />} />
           <Route path="/bots/:id/functions" element={<BotDetail />} />
           <Route path="/bots/:id/logs" element={<BotDetail />} />

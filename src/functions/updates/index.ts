@@ -2,11 +2,21 @@ import type { FunctionManifest, FunctionInstance } from "../registry/types";
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { configStore } from "config/index";
 import { systemLog } from "utils/systemLog";
+import { fetchFeed as fetchAndParse, type FeedItem } from "./feed";
+import { buildFeedUrl } from "./providers";
 
 interface RssSource {
+  /** Direct feed URL. Always present — it is what actually gets fetched. */
   url: string;
   label: string;
   enabled: boolean;
+  /**
+   * Which provider produced `url`, plus the values it was built from. Optional
+   * so sources added as a plain feed URL still work, and so the URL can be
+   * rebuilt if a provider changes how it constructs feeds.
+   */
+  providerId?: string;
+  providerInput?: Record<string, string>;
 }
 
 function log(level: "info" | "warn" | "error", msg: string) {
@@ -16,13 +26,12 @@ function log(level: "info" | "warn" | "error", msg: string) {
 const updatesManifest: FunctionManifest = {
   name: "updates",
   label: "Updates",
-  description: "Monitor RSS feeds and post updates to Discord",
+  description: "Follow native RSS and Atom feeds and post new items to Discord",
   icon: "📡",
   version: "2.0.0",
   configSchema: {
     type: "object",
     properties: {
-      rsshubUrl: { type: "string", default: "http://rsshub:1200", description: "RSSHub instance URL (local Docker or public, e.g. https://rsshub.servalan.one)" },
       checkInterval: { type: "number", default: 15, minimum: 1, maximum: 1440, description: "Check interval in minutes" },
       guildId: { type: "string", description: "Discord server to post in" },
       channelId: { type: "string", description: "Discord channel to post updates" },
@@ -42,7 +51,6 @@ const updatesManifest: FunctionManifest = {
     required: ["channelId"],
   },
   defaultConfig: {
-    rsshubUrl: "http://rsshub:1200",
     checkInterval: 15,
     guildId: "",
     channelId: "",
@@ -96,30 +104,13 @@ const updatesManifest: FunctionManifest = {
       }
     }
 
-    async function fetchFeed(url: string): Promise<{ title: string; link: string; description?: string }[]> {
-      const rsshubBase = (currentConfig.rsshubUrl as string) || "http://rsshub:1200";
-      const feedUrl = `${rsshubBase}/${url.replace(/^https?:\/\//, "")}`;
-
+    async function fetchFeed(url: string): Promise<FeedItem[]> {
+      // The URL is already a real feed published by the origin service — there
+      // is no proxy to prefix. Parsing handles both RSS and Atom.
       try {
-        const res = await fetch(feedUrl, { signal: AbortSignal.timeout(10000) });
-        if (!res.ok) return [];
-        const text = await res.text();
-
-        const items: { title: string; link: string; description?: string }[] = [];
-        const itemMatches = text.matchAll(/<item>([\s\S]*?)<\/item>/gi);
-        for (const match of itemMatches) {
-          const block = match[1];
-          const title = block.match(/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>/i)?.[1]
-            || block.match(/<title>([\s\S]*?)<\/title>/i)?.[1]
-            || "Untitled";
-          const link = block.match(/<link>([\s\S]*?)<\/link>/i)?.[1] || "";
-          const description = block.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/i)?.[1]
-            || block.match(/<description>([\s\S]*?)<\/description>/i)?.[1]
-            || "";
-          if (link) items.push({ title: title.trim(), link: link.trim(), description: description.trim().slice(0, 500) });
-        }
-        return items;
-      } catch {
+        return await fetchAndParse(url);
+      } catch (err: any) {
+        log("warn", `feed fetch failed for ${url}: ${err.message}`);
         return [];
       }
     }
@@ -219,14 +210,24 @@ const updatesManifest: FunctionManifest = {
           await interaction.deferReply({ ephemeral: true });
           await checkFeeds(interaction);
         } else if (sub === "add") {
-          const url = interaction.options.getString("url", true);
+          const raw = interaction.options.getString("url", true);
+
+          // Adding from Discord goes through the same validation the dashboard
+          // uses, so a bad scheme cannot be stored from either entry point.
+          const built = buildFeedUrl("rss", { url: raw });
+          if (!built.ok) {
+            await interaction.reply({ content: `❌ ${built.error}`, ephemeral: true });
+            return;
+          }
+          const url = built.url!;
+
           const label = interaction.options.getString("label") || url;
           const sources = getSources();
           if (sources.some((s) => s.url === url)) {
             await interaction.reply({ content: `⚠️ Source already exists: ${url}`, ephemeral: true });
             return;
           }
-          sources.push({ url, label, enabled: true });
+          sources.push({ url, label, enabled: true, providerId: "rss", providerInput: { url } });
           persistSources(sources);
           await interaction.reply({ content: `✅ Added source: ${label} (${url})`, ephemeral: true });
         } else if (sub === "remove") {

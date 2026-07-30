@@ -1,5 +1,22 @@
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
+export interface FeedProviderField {
+  key: string;
+  label: string;
+  placeholder: string;
+  hint?: string;
+  required?: boolean;
+}
+
+export interface FeedProvider {
+  id: string;
+  label: string;
+  description: string;
+  icon: string;
+  feedSource: string;
+  fields: FeedProviderField[];
+}
+
 class ApiClient {
   private base: string;
 
@@ -52,7 +69,22 @@ class ApiClient {
   }
 
   getMe() {
-    return this.get<{ user: { id: string; username: string; role: string } } | { user: null }>("/api/auth/me");
+    return this.get<
+      { user: { id: string; username: string; role: string; avatarUrl?: string | null } } | { user: null }
+    >("/api/auth/me");
+  }
+
+  updateProfile(data: { username?: string; avatarUrl?: string | null }) {
+    return this.patch<{
+      user: { id: string; username: string; role: string; avatarUrl?: string | null };
+    }>("/api/auth/me", data);
+  }
+
+  changePassword(currentPassword: string, newPassword: string) {
+    return this.post<{ ok: boolean; reauth?: boolean }>("/api/auth/me/password", {
+      currentPassword,
+      newPassword,
+    });
   }
 
   refresh() {
@@ -113,8 +145,20 @@ class ApiClient {
     return this.patch(`/api/bots/${botId}/functions/${functionName}`, data);
   }
 
-  testFeed(rsshubUrl: string, feedPath: string) {
-    return this.post<any>("/api/functions/test-feed", { rsshubUrl, feedPath });
+  /** Source types the Updates function can follow. */
+  getUpdateProviders() {
+    return this.get<{ providers: FeedProvider[] }>("/api/functions/updates/providers");
+  }
+
+  /** Previews a feed, from either a ready URL or a provider + its field values. */
+  testFeed(body: { url?: string; providerId?: string; input?: Record<string, string> }) {
+    return this.post<{
+      ok: boolean;
+      url?: string;
+      error?: string;
+      itemCount?: number;
+      items?: { title: string; link: string }[];
+    }>("/api/functions/test-feed", body);
   }
 
   // Users (admin)

@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { api } from "../api/client";
 import { Slider } from "../components/ui/Slider";
-import SocialSetupWizard from "../components/SocialSetupWizard";
+import SourceBuilder from "../components/SourceBuilder";
 import { useGuildStore } from "../store/guildStore";
 
 const FunctionConfigSchema = z.object({
@@ -169,11 +169,6 @@ export default function FunctionConfig() {
                     value={watch(`config.${key}`) as any[]}
                     onChange={(val) => setValue(`config.${key}`, val)}
                     functionName={name || ""}
-                    rsshubUrl={watch("config.rsshubUrl") as string || currentConfig.rsshubUrl || "http://rsshub:1200"}
-                    onWizardAdd={(source) => {
-                      const current = (watch(`config.${key}`) as any[]) || [];
-                      setValue(`config.${key}`, [...current, source]);
-                    }}
                     wizardOpen={wizardOpen}
                     setWizardOpen={setWizardOpen}
                   />
@@ -284,8 +279,6 @@ function SourcesField({
   value,
   onChange,
   functionName,
-  rsshubUrl,
-  onWizardAdd,
   wizardOpen,
   setWizardOpen,
 }: {
@@ -294,8 +287,6 @@ function SourcesField({
   value: any[];
   onChange: (val: any[]) => void;
   functionName: string;
-  rsshubUrl: string;
-  onWizardAdd: (source: { url: string; label: string; enabled: boolean }) => void;
   wizardOpen: boolean;
   setWizardOpen: (v: boolean) => void;
 }) {
@@ -451,11 +442,7 @@ function SourcesField({
       </div>
 
       {wizardOpen && functionName === "updates" && (
-        <SocialSetupWizard
-          rsshubUrl={rsshubUrl}
-          onAdd={onWizardAdd}
-          onClose={() => setWizardOpen(false)}
-        />
+        <SourceBuilder value={value as any} onChange={(next) => onChange(next)} />
       )}
     </div>
   );

@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { api } from "../api/client";
 import { useAuthStore } from "../store/authStore";
-import { useUIStore } from "../store/uiStore";
+import ThemeSwitcher from "../components/ThemeSwitcher";
 import { useGuildStore } from "../store/guildStore";
 
 export default function Settings() {
   const { user } = useAuthStore();
-  const { theme, setTheme } = useUIStore();
   const { discordUser, guilds, clearDiscord } = useGuildStore();
   const [users, setUsers] = useState<Array<{ id: string; username: string; role: string }>>([]);
   const [showCreateUser, setShowCreateUser] = useState(false);
@@ -20,12 +19,6 @@ export default function Settings() {
   useEffect(() => {
     api.getUsers().then(setUsers).catch(() => {});
   }, []);
-
-  const handleThemeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const t = e.target.value as "light" | "dark" | "system";
-    setTheme(t);
-    api.updateSettings({ theme: t }).catch(() => {});
-  };
 
   const createUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,17 +62,8 @@ export default function Settings() {
       <section className="p-6 bg-discord-card rounded-xl border border-discord-border">
         <h2 className="text-lg font-semibold mb-4">General</h2>
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Theme</label>
-            <select
-              value={theme}
-              onChange={handleThemeChange}
-              className="w-full max-w-xs px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent"
-            >
-              <option value="dark">Dark</option>
-              <option value="light">Light</option>
-              <option value="system">System</option>
-            </select>
+          <div className="max-w-sm">
+            <ThemeSwitcher />
           </div>
         </div>
       </section>

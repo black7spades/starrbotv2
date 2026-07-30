@@ -24,25 +24,6 @@ services:
       - "dockhand.enable=true"
       - "dockhand.name=StarrBot v2"
 
-  rsshub:
-    image: diygod/rsshub:chromium-bundled
-    container_name: starrbot-rsshub
-    restart: unless-stopped
-    ports:
-      - "1200:1200"
-    environment:
-      CACHE_TYPE: "memory"
-      # Never hardcode this - it is a live Instagram session credential.
-      # Put INSTAGRAM_COOKIE in a local .env file (gitignored) instead.
-      INSTAGRAM_COOKIE: ${INSTAGRAM_COOKIE:-}
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:1200/healthz"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-    networks:
-      - starrbot-network
 
 networks:
   starrbot-network:

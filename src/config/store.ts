@@ -155,6 +155,7 @@ export class ConfigStore {
     if (updates.username) users[idx].username = updates.username;
     if (updates.password) users[idx].passwordHash = updates.password; // Already hashed
     if (updates.role) users[idx].role = updates.role;
+    if (updates.avatarUrl !== undefined) users[idx].avatarUrl = updates.avatarUrl;
 
     writeJson(USERS_FILE, users);
     const { passwordHash, ...rest } = users[idx];
