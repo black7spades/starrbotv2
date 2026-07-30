@@ -180,5 +180,9 @@ export const TicketLogSchema = z.object({
   closedBy: z.string(),
   rating: z.number().int().min(0).max(5),
   closedAt: z.number().int().positive(),
+  // Path to the saved conversation, relative to the data directory. Absent for
+  // tickets closed before transcripts existed, or when capture failed.
+  transcript: z.string().optional(),
+  messageCount: z.number().int().nonnegative().optional(),
 });
 export type TicketLog = z.infer<typeof TicketLogSchema>;

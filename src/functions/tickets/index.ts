@@ -7,8 +7,10 @@ import {
   ActionRowBuilder,
   StringSelectMenuBuilder,
   ComponentType,
+  AttachmentBuilder,
 } from "discord.js";
 import type { Guild } from "discord.js";
+import { collectMessages, renderTranscript, saveTranscript } from "./transcript";
 import { configStore } from "config/store";
 import { systemLog } from "utils/systemLog";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
@@ -108,14 +110,22 @@ const ticketsManifest: FunctionManifest = {
     let ticketsCreated = 0;
     let clientRef: any = null;
 
-    async function sendLogSummary(
-      ticketId: string,
-      thread: any,
-      submitterId: string,
-      closedBy: string,
-      rating: number,
-      ratingLabel: string,
-    ) {
+    interface CloseOutcome {
+      ticketId: string;
+      thread: any;
+      submitterId: string;
+      closedBy: string;
+      rating: number;
+      ratingLabel: string;
+      /** Path of the saved transcript, relative to the data dir. */
+      transcriptPath?: string;
+      messageCount?: number;
+      /** Rendered transcript, attached to the summary when present. */
+      transcriptBody?: string;
+    }
+
+    async function sendLogSummary(outcome: CloseOutcome) {
+      const { ticketId, thread, submitterId, closedBy, rating, ratingLabel } = outcome;
       const logChannelId = currentConfig.logChannelId as string;
       log("info", `sendLogSummary: logChannelId="${logChannelId}" clientRef=${!!clientRef}`);
       if (!logChannelId || !clientRef) {
@@ -139,18 +149,108 @@ const ticketsManifest: FunctionManifest = {
           .setTitle(`${ticketId} — Summary`)
           .addFields(
             { name: "Thread", value: `<#${thread.id}>`, inline: true },
-            { name: "Opened by", value: `<@${submitterId}>`, inline: true },
+            { name: "Opened by", value: submitterId ? `<@${submitterId}>` : "unknown", inline: true },
             { name: "Closed by", value: `<@${closedBy}>`, inline: true },
             ratingField,
           )
           .setColor(rating >= 4 ? 0x57f287 : rating >= 3 ? 0xfee75c : rating > 0 ? 0xed4245 : 0x95a5a6)
           .setTimestamp();
 
-        await logChannel.send({ embeds: [summaryEmbed] });
+        if (outcome.transcriptPath) {
+          summaryEmbed.addFields({
+            name: "Transcript",
+            value: `\`${outcome.transcriptPath}\`${
+              outcome.messageCount !== undefined ? ` (${outcome.messageCount} messages)` : ""
+            }`,
+          });
+        } else {
+          summaryEmbed.addFields({ name: "Transcript", value: "⚠️ capture failed — see logs" });
+        }
+
+        // Attach the transcript so the conversation survives deleting the thread.
+        const files = outcome.transcriptBody
+          ? [
+              new AttachmentBuilder(Buffer.from(outcome.transcriptBody, "utf8"), {
+                name: `${ticketId.replace(/[^a-zA-Z0-9._-]+/g, "-") || "ticket"}.md`,
+              }),
+            ]
+          : [];
+
+        await logChannel.send({ embeds: [summaryEmbed], files });
         log("info", `sendLogSummary: posted to ${logChannelId}`);
       } catch (err: any) {
         log("error", `sendLogSummary failed: ${err.message}`);
       }
+    }
+
+    function ticketIdFor(thread: any): string {
+      const match = String(thread?.name ?? "").match(/^(TICKET-\d+)/);
+      return match ? match[1] : String(thread?.name ?? "unknown");
+    }
+
+    /**
+     * Records a closed ticket: captures the conversation, writes the log entry,
+     * and posts the summary. Transcript capture is best-effort — a failure here
+     * must never stop a ticket from being closed.
+     */
+    async function finalizeTicket(
+      thread: any,
+      submitterId: string,
+      closerId: string,
+      rating: number,
+      ratingLabel: string,
+    ) {
+      const ticketId = ticketIdFor(thread);
+      const closedAt = Date.now();
+
+      let transcriptPath: string | undefined;
+      let transcriptBody: string | undefined;
+      let messageCount: number | undefined;
+
+      try {
+        const messages = await collectMessages(thread);
+        transcriptBody = renderTranscript(
+          {
+            ticketId,
+            threadName: String(thread?.name ?? ""),
+            threadId: String(thread?.id ?? ""),
+            submitterId,
+            closedBy: closerId,
+            rating,
+            ratingLabel,
+            closedAt,
+          },
+          messages,
+        );
+        transcriptPath = saveTranscript(ticketId, String(thread?.id ?? ""), transcriptBody);
+        messageCount = messages.length;
+        log("info", `transcript saved for ${ticketId}: ${transcriptPath} (${messages.length} messages)`);
+      } catch (err: any) {
+        log("error", `transcript capture failed for ${ticketId}: ${err.message}`);
+      }
+
+      configStore.logTicket({
+        ticketId,
+        threadName: String(thread?.name ?? ""),
+        threadId: String(thread?.id ?? ""),
+        submitterId,
+        closedBy: closerId,
+        rating,
+        transcript: transcriptPath,
+        messageCount,
+      });
+
+      await sendLogSummary({
+        ticketId,
+        thread,
+        submitterId,
+        closedBy: closerId,
+        rating,
+        ratingLabel,
+        transcriptPath,
+        messageCount,
+        transcriptBody,
+      });
     }
 
     async function sendRatingPrompt(thread: any, submitterId: string, closerId: string) {
@@ -201,19 +301,10 @@ const ticketsManifest: FunctionManifest = {
           ],
         });
 
-        const ticketIdMatch = thread.name.match(/^(TICKET-\d+)/);
-        const ticketId = ticketIdMatch ? ticketIdMatch[1] : thread.name;
-
-        configStore.logTicket({
-          ticketId,
-          threadName: thread.name,
-          threadId: thread.id,
-          submitterId,
-          closedBy: closerId,
-          rating,
-        });
-
-        await sendLogSummary(ticketId, thread, submitterId, closerId, rating, ratingLabels[rating]);
+        // Capture the conversation before the thread is locked/archived, so the
+        // record survives the thread being purged later.
+        const ticketId = ticketIdFor(thread);
+        await finalizeTicket(thread, submitterId, closerId, rating, ratingLabels[rating]);
 
         try {
           await thread.setLocked(true, "Ticket closed — rated by submitter");
@@ -235,19 +326,8 @@ const ticketsManifest: FunctionManifest = {
       collector.on("end", async (collected: any) => {
         log("info", `collector.end: collected=${collected.size}`);
         if (collected.size === 0) {
-          const ticketIdMatch = thread.name.match(/^(TICKET-\d+)/);
-          const ticketId = ticketIdMatch ? ticketIdMatch[1] : thread.name;
-
-          configStore.logTicket({
-            ticketId,
-            threadName: thread.name,
-            threadId: thread.id,
-            submitterId,
-            closedBy: closerId,
-            rating: 0,
-          });
-
-          await sendLogSummary(ticketId, thread, submitterId, closerId, 0, "No response");
+          const ticketId = ticketIdFor(thread);
+          await finalizeTicket(thread, submitterId, closerId, 0, "No response");
 
           await thread.send({
             embeds: [
@@ -378,6 +458,10 @@ const ticketsManifest: FunctionManifest = {
 
           if (!submitterId) {
             log("warn", `close: no persisted opener for ${ticketName}, cannot send rating`);
+            // No opener means no rating prompt, but the ticket must still be
+            // recorded — otherwise this thread has no transcript and no log
+            // entry, and purging it would erase the ticket entirely.
+            await finalizeTicket(thread, "", interaction.user.id, 0, "No response");
             try {
               await thread.setLocked(true, "Closed — could not identify opener");
               await thread.setArchived(true, "Closed — could not identify opener");
