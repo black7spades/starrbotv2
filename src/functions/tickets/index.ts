@@ -11,6 +11,7 @@ import {
 } from "discord.js";
 import type { Guild } from "discord.js";
 import { collectMessages, renderTranscript, saveTranscript } from "./transcript";
+import { findTagId, openTags, resolvedTags } from "./forum";
 import { configStore } from "config/store";
 import { systemLog } from "utils/systemLog";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
@@ -63,15 +64,28 @@ let ticketCounter = loadTicketCounter();
 const ticketsManifest: FunctionManifest = {
   name: "tickets",
   label: "Tickets",
-  description: "Support ticket system with Discord threads",
+  description: "Support ticket system built on a Discord forum channel",
   icon: "🎫",
-  version: "2.2.0",
+  version: "3.0.0",
   configSchema: {
     type: "object",
     properties: {
-      adminChannelId: { type: "string", description: "Channel where tickets are created" },
+      adminChannelId: {
+        type: "string",
+        description: "Forum channel where tickets are created (must be a forum, not a text channel)",
+      },
       adminRoleId: { type: "string", description: "Role that can manage tickets" },
       logChannelId: { type: "string", description: "Channel for ticket outcome summaries (optional)" },
+      openTagName: {
+        type: "string",
+        description: "Forum tag applied to new tickets (create it in the forum's settings)",
+        default: "Open",
+      },
+      resolvedTagName: {
+        type: "string",
+        description: "Forum tag applied when a ticket is closed",
+        default: "Resolved",
+      },
     },
     required: ["adminChannelId", "adminRoleId"],
   },
@@ -79,6 +93,8 @@ const ticketsManifest: FunctionManifest = {
     adminChannelId: "",
     adminRoleId: "",
     logChannelId: "",
+    openTagName: "Open",
+    resolvedTagName: "Resolved",
   },
   commands: [
     new SlashCommandBuilder()
@@ -183,6 +199,43 @@ const ticketsManifest: FunctionManifest = {
       }
     }
 
+    /**
+     * Swaps a closed ticket's forum tags from "Open" to "Resolved".
+     *
+     * Best-effort: a missing tag or a permissions failure must never stop a
+     * ticket from closing, so problems are logged and swallowed.
+     */
+    async function markResolved(thread: any): Promise<void> {
+      try {
+        let parent = thread?.parent;
+        // The parent may not be cached; fall back to fetching it by id.
+        if (!parent && thread?.parentId && clientRef) {
+          parent = await clientRef.channels.fetch(thread.parentId).catch(() => null);
+        }
+        if (!parent || parent.type !== ChannelType.GuildForum) return;
+
+        const openTagId = findTagId(parent, currentConfig.openTagName as string);
+        const resolvedTagId = findTagId(parent, currentConfig.resolvedTagName as string);
+
+        if (!resolvedTagId) {
+          log(
+            "warn",
+            `close: no forum tag named "${String(currentConfig.resolvedTagName)}" — leaving tags unchanged`,
+          );
+          return;
+        }
+
+        const current: string[] = Array.isArray(thread.appliedTags) ? thread.appliedTags : [];
+        const next = resolvedTags(current, openTagId, resolvedTagId);
+        if (!next) return;
+
+        await thread.setAppliedTags(next, "Ticket closed");
+        log("info", `close: tagged ${thread.id} as resolved`);
+      } catch (err: any) {
+        log("warn", `close: could not update forum tags on ${thread?.id}: ${err.message}`);
+      }
+    }
+
     function ticketIdFor(thread: any): string {
       const match = String(thread?.name ?? "").match(/^(TICKET-\d+)/);
       return match ? match[1] : String(thread?.name ?? "unknown");
@@ -251,6 +304,8 @@ const ticketsManifest: FunctionManifest = {
         messageCount,
         transcriptBody,
       });
+
+      await markResolved(thread);
     }
 
     async function sendRatingPrompt(thread: any, submitterId: string, closerId: string) {
@@ -385,8 +440,11 @@ const ticketsManifest: FunctionManifest = {
           await interaction.deferReply({ ephemeral: true });
 
           const channel = await interaction.client.channels.fetch(channelId);
-          if (!channel || channel.type !== ChannelType.GuildText) {
-            await interaction.editReply({ content: "❌ Admin channel not found or is not a text channel." });
+          if (!channel || channel.type !== ChannelType.GuildForum) {
+            await interaction.editReply({
+              content:
+                "❌ The configured ticket channel is not a forum channel. Tickets are created as forum posts — set the tickets function's channel to a forum.",
+            });
             return;
           }
 
@@ -397,21 +455,29 @@ const ticketsManifest: FunctionManifest = {
           const embed = new EmbedBuilder()
             .setTitle(`${ticketId}: ${subject}`)
             .setDescription(message)
-            .addFields(
-              { name: "Opened by", value: `<@${interaction.user.id}>`, inline: true },
-              { name: "Status", value: "Open", inline: true },
-            )
+            // Status deliberately lives on the forum tag, not in this embed: the
+            // starter message can't be kept in sync cheaply, and a hardcoded
+            // "Open" field would still read Open after the ticket is resolved.
+            .addFields({ name: "Opened by", value: `<@${interaction.user.id}>`, inline: true })
             .setColor(0x5865f2)
             .setTimestamp();
 
+          const openTagId = findTagId(channel, currentConfig.openTagName as string);
+          if (!openTagId && currentConfig.openTagName) {
+            log("warn", `create: no forum tag named "${String(currentConfig.openTagName)}" — posting untagged`);
+          }
+
+          // A forum post is created with its starter message, unlike a text
+          // channel thread which is created empty and posted into afterwards.
           const thread = await channel.threads.create({
             name: `${ticketId} — ${subject}`,
             autoArchiveDuration: 10080,
             reason: `Ticket from ${interaction.user.username}`,
+            message: { embeds: [embed] },
+            appliedTags: openTags(openTagId),
           });
 
           await thread.members.add(interaction.user.id);
-          await thread.send({ embeds: [embed] });
           await thread.send(`<@&${adminRoleId}> New ticket from <@${interaction.user.id}>`);
 
           ticketsCreated++;

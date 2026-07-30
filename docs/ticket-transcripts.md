@@ -1,5 +1,8 @@
 # Ticket transcripts
 
+> Tickets live in a forum channel — see
+> [tickets-forum-setup.md](./tickets-forum-setup.md) for how to set that up.
+
 Every ticket closed through `/ticket close` is now saved as a Markdown
 transcript before the thread is locked and archived. The point is that deleting
 a thread later — by hand or via `/ticket purge` — no longer destroys the support
