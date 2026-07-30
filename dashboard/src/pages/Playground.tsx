@@ -18,6 +18,7 @@ const FUNCTION_ICON: Record<string, IconName> = {
   updates: "rss",
   tickets: "ticket",
   instagram: "camera",
+  twitch: "twitch",
 };
 
 interface Manifest {

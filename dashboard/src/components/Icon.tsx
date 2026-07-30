@@ -34,6 +34,7 @@ export type IconName =
   | "rss"
   | "ticket"
   | "camera"
+  | "twitch"
   | "search"
   | "alert"
   | "spinner";
@@ -157,6 +158,12 @@ const PATHS: Record<IconName, JSX.Element> = {
       <rect x="3" y="7" width="18" height="13" rx="3" />
       <circle cx="12" cy="13.5" r="3.5" />
       <path d="M8 7l1.5-2h5L16 7" />
+    </>
+  ),
+  twitch: (
+    <>
+      <path d="M4 4h16v10l-4 4h-4l-3 3v-3H4z" />
+      <path d="M11 8v4M15 8v4" />
     </>
   ),
   search: (

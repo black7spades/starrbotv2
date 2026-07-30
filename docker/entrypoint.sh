@@ -22,5 +22,10 @@ if [ -z "$COOKIE_SECRET" ]; then
     echo "Generated COOKIE_SECRET"
 fi
 
+if [ -z "$TWITCH_EVENTSUB_SECRET" ]; then
+    export TWITCH_EVENTSUB_SECRET=$(openssl rand -hex 32)
+    echo "Generated TWITCH_EVENTSUB_SECRET"
+fi
+
 # Drop privileges and execute the main command
 exec su-exec nodejs "$@"
