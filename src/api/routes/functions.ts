@@ -132,7 +132,8 @@ export const functionRoutes: FastifyPluginAsync = async (fastify: FastifyInstanc
         await runtime.reloadFunction(name);
       }
 
-      return { functionName: name, ...updated };
+      // `updated` already carries functionName (same value) — see bots.ts.
+      return updated;
     }
   );
 };

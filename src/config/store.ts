@@ -1,4 +1,12 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "fs";
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  mkdirSync,
+  renameSync,
+  accessSync,
+  constants as fsConstants,
+} from "fs";
 import { join } from "path";
 import { createHash } from "crypto";
 import { functionRegistry } from "functions/registry/index";
@@ -18,7 +26,9 @@ import {
   TicketLog,
 } from "./schema";
 
-const DATA_DIR = join(__dirname, "../../data");
+// Overridable so tests (and alternative deployments) can point the JSON store
+// at a scratch directory instead of the repo's data/ dir.
+const DATA_DIR = process.env.STARRBOT_DATA_DIR || join(__dirname, "../../data");
 
 const USERS_FILE = join(DATA_DIR, "users.json");
 const BOTS_FILE = join(DATA_DIR, "bots.json");
@@ -56,8 +66,26 @@ function writeJson<T>(file: string, data: T): void {
   renameSync(tmp, file);
 }
 
-function generateId(name: string): string {
+function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+/**
+ * Builds an id from `name` that does not collide with `taken`.
+ *
+ * The slug alone is not enough: two bots called "My Bot" both slugified to
+ * "my-bot", so the second overwrote the first on lookup and deleting either
+ * removed both. A name with no alphanumerics (e.g. "!!!") also slugified to the
+ * empty string, producing an unaddressable record.
+ */
+function generateId(name: string, taken: Iterable<string> = []): string {
+  const base = slugify(name) || "unnamed";
+  const existing = new Set(taken);
+  if (!existing.has(base)) return base;
+  for (let n = 2; ; n++) {
+    const candidate = `${base}-${n}`;
+    if (!existing.has(candidate)) return candidate;
+  }
 }
 
 export class ConfigStore {
@@ -103,7 +131,7 @@ export class ConfigStore {
 
   createUser(input: CreateUserInput): Omit<User, "passwordHash"> {
     const users = readJson<User[]>(USERS_FILE, []);
-    const id = generateId(input.username);
+    const id = generateId(input.username, users.map((u) => u.id));
     const now = Date.now();
     const user: User = {
       id,
@@ -153,7 +181,7 @@ export class ConfigStore {
 
   createBot(input: CreateBotInput): Bot {
     const bots = this.getBots();
-    const id = generateId(input.name);
+    const id = generateId(input.name, bots.map((b) => b.id));
     const now = Date.now();
     const bot: Bot = { id, ...input, enabled: true, createdAt: now };
     bots.push(bot);
@@ -313,6 +341,20 @@ export class ConfigStore {
     return tickets.slice(-limit);
   }
 
+  /**
+   * Drops ticket log entries by thread id. Used by /ticket purge so a purged
+   * ticket is not re-attempted on every subsequent run.
+   */
+  deleteTicketLogs(threadIds: string[]): number {
+    if (threadIds.length === 0) return 0;
+    const remove = new Set(threadIds);
+    const tickets = readJson<TicketLog[]>(TICKETS_LOG_FILE, []);
+    const kept = tickets.filter((t) => !remove.has(t.threadId));
+    const removed = tickets.length - kept.length;
+    if (removed > 0) writeJson(TICKETS_LOG_FILE, kept);
+    return removed;
+  }
+
   // Templates
   getTemplates(): BotTemplate[] {
     return readJson<BotTemplate[]>(TEMPLATES_FILE, []);
@@ -324,7 +366,7 @@ export class ConfigStore {
 
   createTemplate(input: { name: string; description?: string; functionConfigs: BotTemplate["functionConfigs"] }): BotTemplate {
     const templates = this.getTemplates();
-    const id = generateId(input.name);
+    const id = generateId(input.name, templates.map((tpl) => tpl.id));
     const template: BotTemplate = {
       id,
       name: input.name,
@@ -362,6 +404,20 @@ export class ConfigStore {
         allFunctions: functions.map((f) => f.functionName),
       };
     });
+  }
+
+  /**
+   * Readiness probe: confirms the data directory exists and is writable, which
+   * is the only external dependency this store has.
+   */
+  isReady(): boolean {
+    try {
+      ensureDataDir();
+      accessSync(DATA_DIR, fsConstants.W_OK);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   close(): void {

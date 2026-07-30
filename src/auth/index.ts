@@ -18,7 +18,11 @@ export async function authenticateUser(username: string, password: string): Prom
   return rest;
 }
 
-export function createSession(user: User): { accessToken: string; refreshToken: string } {
+// Takes the password-less user record: callers hold the sanitised shape that
+// authenticateUser/getUserById return, and only the identity fields are needed.
+export function createSession(
+  user: Omit<User, "passwordHash">
+): { accessToken: string; refreshToken: string } {
   const accessToken = generateAccessToken({ sub: user.id, username: user.username, role: user.role });
   const refreshToken = generateRefreshToken({ sub: user.id, username: user.username, role: user.role });
   const refreshTokenHash = hashToken(refreshToken);

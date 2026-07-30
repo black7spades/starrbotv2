@@ -462,9 +462,6 @@ class BotManagerClass extends EventEmitter {
     await this.startBot(config);
   }
 
-  checkRedisConnection(): boolean {
-    return true;
-  }
 }
 
 export const botManager = new BotManagerClass();

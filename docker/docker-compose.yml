@@ -10,7 +10,6 @@ services:
     # No .env file needed - secrets auto-generated at runtime
     environment:
       - NODE_ENV=production
-      - REDIS_URL=redis://redis:6379
       - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
       - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET}
       - BASE_URL=${BASE_URL}
@@ -19,28 +18,11 @@ services:
       # - JWT_ACCESS_SECRET=your-custom-access-secret
       # - JWT_REFRESH_SECRET=your-custom-refresh-secret
       # - COOKIE_SECRET=your-custom-cookie-secret
-    depends_on:
-      redis:
-        condition: service_healthy
     networks:
       - starrbot-network
     labels:
       - "dockhand.enable=true"
       - "dockhand.name=StarrBot v2"
-
-  redis:
-    image: redis:7-alpine
-    container_name: starrbot-redis
-    restart: unless-stopped
-    volumes:
-      - redis-data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-    networks:
-      - starrbot-network
 
   rsshub:
     image: diygod/rsshub:chromium-bundled
@@ -61,9 +43,6 @@ services:
       start_period: 30s
     networks:
       - starrbot-network
-
-volumes:
-  redis-data:
 
 networks:
   starrbot-network:

@@ -33,6 +33,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Test
+        run: npm test
+
   build:
     needs: check
     # Don't publish images for pull requests — PRs only run the checks above.

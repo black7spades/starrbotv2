@@ -9,7 +9,7 @@
     "build": "tsc && tsc-alias",
     "start": "node dist/index.js",
     "lint": "eslint src --ext .ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
     "test": "vitest run"
   },
   "dependencies": {
@@ -22,7 +22,6 @@
     "bcryptjs": "^3.0.3",
     "discord.js": "^14.14.1",
     "fastify": "^4.26.1",
-    "ioredis": "^5.4.1",
     "jsonwebtoken": "^9.0.2",
     "pino": "^8.19.0",
     "pino-pretty": "^11.0.0",

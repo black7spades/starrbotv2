@@ -3,8 +3,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apk add --no-cache python3 make g++
+# No native toolchain needed: nothing in the root or dashboard dependency tree
+# uses node-gyp, so `npm ci` never compiles. (Verified by running both installs
+# with cc/gcc/g++/make/python3 stubbed out.)
 
 ARG GIT_HASH=unknown
 ENV GIT_HASH=${GIT_HASH}
@@ -61,7 +62,6 @@ RUN mkdir -p /app/data
 EXPOSE 2013
 
 ENV NODE_ENV=production
-ENV REDIS_URL=redis://redis:6379
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["node", "dist/index.js"]

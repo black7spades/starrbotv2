@@ -8,12 +8,14 @@ import {
   StringSelectMenuBuilder,
   ComponentType,
 } from "discord.js";
+import type { Guild } from "discord.js";
 import { configStore } from "config/store";
 import { systemLog } from "utils/systemLog";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
 
-const DATA_DIR = join(__dirname, "../../../data");
+// Same override as the config store — see src/config/store.ts.
+const DATA_DIR = process.env.STARRBOT_DATA_DIR || join(__dirname, "../../../data");
 const COUNTER_FILE = join(DATA_DIR, "ticket-counter.json");
 const OPENERS_FILE = join(DATA_DIR, "ticket-openers.json");
 
@@ -411,8 +413,12 @@ const ticketsManifest: FunctionManifest = {
           let deleted = 0;
           let failed = 0;
           let notFound = 0;
+          // Thread ids to drop from the ticket log: everything we either deleted
+          // or confirmed is already gone. Failures stay so they can be retried.
+          const settled: string[] = [];
 
-          const guild = interaction.guild ?? interaction.client.guilds.cache.get(interaction.guildId);
+          const guild: Guild | undefined =
+            interaction.guild ?? interaction.client.guilds.cache.get(interaction.guildId);
           if (!guild) {
             await interaction.editReply({ content: "❌ Could not resolve guild." });
             return;
@@ -420,25 +426,62 @@ const ticketsManifest: FunctionManifest = {
 
           for (const ticket of closed) {
             try {
-              const thread = await guild.threads.fetch(ticket.threadId);
-              if (!thread) { notFound++; continue; }
-              if (thread.archived) await thread.setArchived(false, "Purge — unarchiving to delete");
+              // NOTE: must be guild.channels, not guild.threads — Guild has no
+              // `threads` manager (only text/forum channels do), so the previous
+              // guild.threads.fetch() threw TypeError on every iteration and
+              // purge never deleted anything.
+              const thread = await guild.channels.fetch(ticket.threadId);
+
+              if (!thread) {
+                notFound++;
+                settled.push(ticket.threadId);
+                continue;
+              }
+
+              // Guard against a stale/incorrect id pointing at a real channel:
+              // only ever delete threads here.
+              if (!thread.isThread?.()) {
+                log("warn", `purge: ${ticket.ticketId} (${ticket.threadId}) is not a thread — skipping`);
+                failed++;
+                continue;
+              }
+
+              // Archived threads can be deleted directly; unarchiving first is
+              // best-effort only and must not abort the delete.
+              if (thread.archived) {
+                await thread.setArchived(false, "Purge — unarchiving to delete").catch(() => {});
+              }
+
               await thread.delete(`Purged by ${interaction.user.tag}`);
               deleted++;
+              settled.push(ticket.threadId);
             } catch (err: any) {
+              // 10003 = Unknown Channel: the thread is already gone, which is a
+              // success for our purposes rather than a failure.
+              if (err?.code === 10003) {
+                notFound++;
+                settled.push(ticket.threadId);
+                continue;
+              }
               log("warn", `purge: failed to delete ${ticket.ticketId} (${ticket.threadId}): ${err.message}`);
               failed++;
             }
           }
 
+          const pruned = configStore.deleteTicketLogs(settled);
+
           const parts = [`🗑️ Purge complete:`];
           if (deleted) parts.push(`**${deleted}** deleted`);
           if (notFound) parts.push(`**${notFound}** already gone`);
           if (failed) parts.push(`**${failed}** failed`);
+          if (!deleted && !notFound && !failed) parts.push("nothing to do");
           parts.push(days ? `(closed within last ${days} day(s))` : "(all closed tickets)");
 
           await interaction.editReply({ content: parts.join(" — ") });
-          log("info", `purge: deleted=${deleted} notFound=${notFound} failed=${failed} days=${days ?? "all"}`);
+          log(
+            "info",
+            `purge: deleted=${deleted} notFound=${notFound} failed=${failed} logPruned=${pruned} days=${days ?? "all"}`
+          );
         }
       },
       getStats() {

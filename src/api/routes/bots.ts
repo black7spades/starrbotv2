@@ -212,7 +212,9 @@ export const botRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) =>
       if (runtime && runtime.status === "running") {
         await runtime.reloadFunction(functionName);
       }
-      return { functionName, ...updated };
+      // `updated` already carries functionName (same value), so spreading it
+      // last silently overwrote the explicit key — return it directly.
+      return updated;
     }
   );
 
