@@ -35,8 +35,12 @@ export type IconName =
   | "ticket"
   | "camera"
   | "twitch"
+  | "wave"
+  | "badge"
   | "search"
   | "alert"
+  | "database"
+  | "broom"
   | "spinner";
 
 const PATHS: Record<IconName, JSX.Element> = {
@@ -166,6 +170,20 @@ const PATHS: Record<IconName, JSX.Element> = {
       <path d="M11 8v4M15 8v4" />
     </>
   ),
+  wave: (
+    <>
+      <path d="M7 11V5.5a1.5 1.5 0 0 1 3 0V11" />
+      <path d="M10 10.5v-6a1.5 1.5 0 0 1 3 0V11" />
+      <path d="M13 10.5V6a1.5 1.5 0 0 1 3 0v6" />
+      <path d="M16 9.5a1.5 1.5 0 0 1 3 0V13a7 7 0 0 1-7 7h-1a6 6 0 0 1-6-6v-3a1.5 1.5 0 0 1 3 0" />
+    </>
+  ),
+  badge: (
+    <>
+      <path d="M12 3l2.5 1.8 3-.2.6 3 2.4 1.9-1.4 2.7 1.4 2.7-2.4 1.9-.6 3-3-.2L12 21l-2.5-1.8-3 .2-.6-3L3.5 14.5 4.9 11.8 3.5 9.1l2.4-1.9.6-3 3 .2z" />
+      <path d="M9 12l2 2 4-4" />
+    </>
+  ),
   search: (
     <>
       <circle cx="11" cy="11" r="6" />
@@ -176,6 +194,20 @@ const PATHS: Record<IconName, JSX.Element> = {
     <>
       <path d="M12 4l9 16H3z" />
       <path d="M12 10v4M12 17v.5" />
+    </>
+  ),
+  database: (
+    <>
+      <ellipse cx="12" cy="6" rx="8" ry="3" />
+      <path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6" />
+      <path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" />
+    </>
+  ),
+  broom: (
+    <>
+      <path d="M19 4l-8 8" />
+      <path d="M8.5 9.5l6 6-3.5 3.5a3 3 0 0 1-4.2 0l-1.8-1.8a3 3 0 0 1 0-4.2z" />
+      <path d="M4 20l2-2" />
     </>
   ),
   spinner: <path d="M12 3a9 9 0 0 1 9 9" />,

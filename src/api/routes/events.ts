@@ -1,7 +1,8 @@
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 import { botManager } from "discord/manager";
 import { systemLog, LogEntry } from "utils/systemLog";
-import { optionalAuth } from "auth/middleware";
+import { storageReport, sweep } from "utils/storage";
+import { optionalAuth, requireAdmin } from "auth/middleware";
 
 export const eventRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   fastify.get("/stream", { preHandler: optionalAuth }, async (request, reply) => {
@@ -42,6 +43,41 @@ export const eventRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) 
       source: query.source || undefined,
       since: query.since ? parseInt(query.since) : undefined,
     });
+  });
+
+  /**
+   * What the app is holding on disk, and under what limits. Surfaced in the
+   * dashboard so nobody has to shell into the container to find out why a
+   * volume is filling up.
+   */
+  fastify.get("/logs/storage", async () => storageReport());
+
+  /**
+   * Runs every retention rule immediately instead of waiting for the timer.
+   *
+   * `transcriptDays` is opt-in and defaults to keeping transcripts forever —
+   * they are the only record of what was said in a ticket, so nothing deletes
+   * them unless an operator asks for it by name.
+   */
+  fastify.post("/logs/sweep", { preHandler: requireAdmin }, async (request) => {
+    const body = (request.body || {}) as { transcriptDays?: number };
+    const days = Number(body.transcriptDays);
+    const result = sweep(Number.isFinite(days) && days > 0 ? days : 0);
+    systemLog.add("info", "Storage sweep run from the dashboard", "api", {
+      ...result,
+      user: request.user?.username,
+    });
+    return { ...result, storage: storageReport() };
+  });
+
+  /** Clears the system log. Transcripts and configuration are untouched. */
+  fastify.delete("/logs", { preHandler: requireAdmin }, async (request) => {
+    const before = systemLog.stats().entries;
+    systemLog.clear();
+    systemLog.add("info", `System log cleared (${before} entries)`, "api", {
+      user: request.user?.username,
+    });
+    return { cleared: before, storage: storageReport() };
   });
 
   fastify.get("/logs/stream", { preHandler: optionalAuth }, async (request, reply) => {

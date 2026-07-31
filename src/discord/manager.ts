@@ -39,6 +39,10 @@ function createBotInstance(botConfig: Bot): ManagedBot {
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMessages,
       GatewayIntentBits.MessageContent,
+      // Privileged. Required for member joins (welcome) and role changes
+      // (subscriber sync). Must also be enabled for the application in the
+      // Discord Developer Portal, or the gateway refuses the connection.
+      GatewayIntentBits.GuildMembers,
     ],
   });
 
@@ -259,6 +263,38 @@ function createBotInstance(botConfig: Bot): ManagedBot {
             await instance.onMessage(message, emitter as ManagedBot, { bot: emitter, client, config: botConfig });
           } catch (err: any) {
             log("error", `Message handler error: ${err.message}`);
+          }
+        }
+      }
+    });
+
+    client.on(Events.GuildMemberAdd, async (member) => {
+      for (const [, instance] of functions) {
+        if (instance.onMemberJoin) {
+          try {
+            await instance.onMemberJoin(member, emitter as ManagedBot, {
+              bot: emitter,
+              client,
+              config: botConfig,
+            });
+          } catch (err: any) {
+            log("error", `Member join handler error: ${err.message}`);
+          }
+        }
+      }
+    });
+
+    client.on(Events.GuildMemberUpdate, async (before, after) => {
+      for (const [, instance] of functions) {
+        if (instance.onMemberUpdate) {
+          try {
+            await instance.onMemberUpdate(before, after, emitter as ManagedBot, {
+              bot: emitter,
+              client,
+              config: botConfig,
+            });
+          } catch (err: any) {
+            log("error", `Member update handler error: ${err.message}`);
           }
         }
       }
