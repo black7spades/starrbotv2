@@ -8,6 +8,20 @@ export interface FeedProviderField {
   required?: boolean;
 }
 
+export interface TwitchCheck {
+  id: string;
+  label: string;
+  status: "pass" | "fail" | "warn" | "skip";
+  detail: string;
+  fix?: string;
+}
+
+export interface TwitchDiagnostics {
+  ok: boolean;
+  checks: TwitchCheck[];
+  callbackUrl: string;
+}
+
 export interface FeedProvider {
   id: string;
   label: string;
@@ -143,6 +157,20 @@ class ApiClient {
 
   updateFunctionConfig(botId: string, functionName: string, data: any) {
     return this.patch(`/api/bots/${botId}/functions/${functionName}`, data);
+  }
+
+  /** Twitch integration health — read-only, safe to call repeatedly. */
+  twitchDiagnostics(channel?: string) {
+    const q = channel ? `?channel=${encodeURIComponent(channel)}` : "";
+    return this.get<TwitchDiagnostics>(`/api/functions/twitch/diagnostics${q}`);
+  }
+
+  /** Sends a signed test go-live through the real callback. Posts to Discord. */
+  twitchSelfTest(channel: string) {
+    return this.post<TwitchDiagnostics & { delivered: boolean; deliveryDetail: string }>(
+      "/api/functions/twitch/self-test",
+      { channel }
+    );
   }
 
   /** Source types the Updates function can follow. */

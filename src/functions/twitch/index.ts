@@ -92,6 +92,11 @@ const twitchManifest: FunctionManifest = {
       .addSubcommand((sub) =>
         sub.setName("status").setDescription("Show the watched channel and subscription health")
       )
+      .addSubcommand((sub) =>
+        sub
+          .setName("test")
+          .setDescription("Check the integration and post a test announcement here")
+      )
       .toJSON() as any,
   ],
 
@@ -158,18 +163,33 @@ const twitchManifest: FunctionManifest = {
           .setAuthor({ name, url })
           .setTitle(lastTitle || `${name} is live on Twitch`)
           .setURL(url)
-          .setColor(0x9146ff)
+          .setColor(n.isTest ? 0x777777 : 0x9146ff)
           .setTimestamp(n.event.startedAt ? new Date(n.event.startedAt) : new Date());
+
+        if (n.isTest) {
+          embed.setFooter({ text: "Test event — the stream is not actually live" });
+        }
 
         if (lastGame) embed.addFields({ name: "Playing", value: lastGame, inline: true });
 
-        const mention = currentConfig.mentionRoleId
-          ? `<@&${currentConfig.mentionRoleId}> `
-          : "";
+        // A test never pings the notification role — that is precisely the cost
+        // of a false alarm, and it would make people distrust real alerts.
+        const mention =
+          currentConfig.mentionRoleId && !n.isTest ? `<@&${currentConfig.mentionRoleId}> ` : "";
+        const prefix = n.isTest ? "🧪 **Test announcement** — this is what a go-live looks like.\n" : "";
 
-        await channel.send({ content: `${mention}${content}\n${url}`, embeds: [embed] });
-        announced++;
-        log("info", `announced go-live for ${n.event.broadcasterUserLogin}`);
+        await channel.send({
+          content: `${prefix}${mention}${content}\n${url}`,
+          embeds: [embed],
+          allowedMentions: n.isTest ? { parse: [] } : undefined,
+        });
+
+        if (n.isTest) {
+          log("info", "posted a test announcement");
+        } else {
+          announced++;
+          log("info", `announced go-live for ${n.event.broadcasterUserLogin}`);
+        }
       } catch (err: any) {
         lastError = err.message;
         log("error", `failed to post announcement: ${err.message}`);
@@ -261,7 +281,32 @@ const twitchManifest: FunctionManifest = {
 
       async handleCommand(interaction: any) {
         if (interaction.commandName !== "twitch") return;
-        if (interaction.options.getSubcommand() !== "status") return;
+        const sub = interaction.options.getSubcommand();
+
+        if (sub === "test") {
+          await interaction.deferReply({ ephemeral: true });
+          const { runSelfTest } = await import("./selftest");
+          const result = await runSelfTest({
+            broadcasterLogin: String(currentConfig.broadcasterLogin ?? ""),
+          });
+
+          const icon = (s: string) =>
+            s === "pass" ? "✅" : s === "fail" ? "❌" : s === "warn" ? "⚠️" : "➖";
+          const lines = result.checks.map(
+            (c) => `${icon(c.status)} **${c.label}** — ${c.detail}${c.fix ? `\n   ↳ ${c.fix}` : ""}`
+          );
+          lines.push("");
+          lines.push(
+            result.delivered
+              ? `✅ **Delivery** — ${result.deliveryDetail}`
+              : `❌ **Delivery** — ${result.deliveryDetail}`
+          );
+
+          await interaction.editReply({ content: lines.join("\n").slice(0, 1900) });
+          return;
+        }
+
+        if (sub !== "status") return;
 
         const login = String(currentConfig.broadcasterLogin ?? "") || "(not set)";
         const lines = [

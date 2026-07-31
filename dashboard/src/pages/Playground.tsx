@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import Icon, { type IconName } from "../components/Icon";
 import SourceBuilder from "../components/SourceBuilder";
+import TwitchDiagnostics from "../components/TwitchDiagnostics";
 
 /**
  * One page to configure a function and put it on bots.
@@ -229,6 +230,12 @@ export default function Playground() {
                   onChange={(v) => setConfig((c) => ({ ...c, [key]: v }))}
                 />
               ))}
+
+              {/* Twitch depends on things the form cannot show — a reachable
+                  callback and live subscriptions — so it self-checks here. */}
+              {manifest.name === "twitch" && (
+                <TwitchDiagnostics channel={String(config.broadcasterLogin ?? "")} />
+              )}
             </div>
           )}
         </section>

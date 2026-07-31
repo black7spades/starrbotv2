@@ -4,6 +4,7 @@ import { configStore } from "config/index";
 import { getAllManifests, getManifest } from "functions/registry/index";
 import { providerCatalogue, buildFeedUrl } from "functions/updates/providers";
 import { fetchFeed } from "functions/updates/feed";
+import { runDiagnostics, runSelfTest } from "functions/twitch/selftest";
 import { requireAdmin, optionalAuth } from "auth/middleware";
 import { botManager } from "discord/manager";
 
@@ -17,13 +18,41 @@ export const functionRoutes: FastifyPluginAsync = async (fastify: FastifyInstanc
     return getAllManifests();
   });
 
+  /**
+   * Twitch integration health. Read-only and side-effect free, so it is safe to
+   * poll from the dashboard while someone is filling the form in.
+   */
+  fastify.get<{ Querystring: { channel?: string } }>(
+    "/twitch/diagnostics",
+    { preHandler: requireAdmin },
+    async (request) => {
+      return runDiagnostics(request.query.channel);
+    }
+  );
+
+  /**
+   * Sends a signed synthetic go-live through the real public callback. Admin
+   * only and a POST, because it puts a message in a Discord channel.
+   */
+  fastify.post<{ Body: { channel?: string } }>(
+    "/twitch/self-test",
+    { preHandler: requireAdmin },
+    async (request, reply) => {
+      const channel = (request.body?.channel ?? "").trim();
+      if (!channel) {
+        return reply
+          .code(400)
+          .send({ error: "Bad Request", message: "A Twitch channel name is required" });
+      }
+      return runSelfTest({ broadcasterLogin: channel });
+    }
+  );
+
   // Source types the Updates function can follow, for the Playground's picker.
   fastify.get("/updates/providers", { preHandler: optionalAuth }, async () => {
     return { providers: providerCatalogue() };
   });
 
-  // Admin-only: this endpoint makes a server-side request to a caller-supplied
-  // URL, so it can be used to reach hosts only the server can see.
   // Admin-only: this endpoint makes a server-side request to a caller-supplied
   // URL, so it can be used to reach hosts only the server can see.
   fastify.post<{ Body: { url?: string; providerId?: string; input?: Record<string, string> } }>(
