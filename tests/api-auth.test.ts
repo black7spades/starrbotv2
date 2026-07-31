@@ -6,7 +6,7 @@ import { configStore } from "config/index";
 import { createUser } from "auth/index";
 import { generateAccessToken } from "auth/jwt";
 import { registerFunction } from "functions/registry/index";
-import { instagramManifest } from "functions/instagram/index";
+import { twitchManifest } from "functions/twitch/index";
 
 /**
  * Regression tests for the API auth model.
@@ -15,7 +15,7 @@ import { instagramManifest } from "functions/instagram/index";
  * optionalAuth populates request.user when a token is present but never
  * rejects, so every GET in the group was readable anonymously — including
  * GET /api/bots/:id, which returns each function's stored config and therefore
- * leaked saved Instagram session cookies in plaintext.
+ * leaked stored per-function secrets in plaintext.
  */
 
 let server: FastifyInstance;
@@ -27,7 +27,7 @@ const SECRET_COOKIE = "sessionid=SUPER_SECRET_SESSION_VALUE";
 beforeAll(async () => {
   // getBotFunctions() filters out configs whose function isn't registered, so
   // register the manifest as src/index.ts does at boot.
-  registerFunction(instagramManifest);
+  registerFunction(twitchManifest);
 
   // Seed a bot whose function config holds a secret, mirroring a real install.
   configStore.createBot({
@@ -35,8 +35,8 @@ beforeAll(async () => {
     token: "discord-bot-token-that-must-not-leak",
     clientId: "1234567890",
   });
-  configStore.upsertBotFunction("test-bot", "instagram", {
-    config: { cookie: SECRET_COOKIE },
+  configStore.upsertBotFunction("test-bot", "twitch", {
+    config: { broadcasterLogin: "somestreamer", mentionRoleId: SECRET_COOKIE },
     enabled: true,
   });
 

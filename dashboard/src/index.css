@@ -109,6 +109,24 @@ button:disabled {
       inset 0 1px 0 rgba(255, 255, 255, 0.18);
   }
 
+  /*
+   * Menus and dialogs. Unlike .glass, this is deliberately near-opaque: a
+   * translucent popover let the page behind compete with its own content and
+   * made the text hard to read. The blur is heavier and the shadow deeper so
+   * it reads as floating above the page rather than blended into it.
+   */
+  .glass-popover {
+    background: var(--popover);
+    backdrop-filter: blur(28px) saturate(150%);
+    -webkit-backdrop-filter: blur(28px) saturate(150%);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    box-shadow:
+      0 24px 60px rgba(0, 0, 0, 0.4),
+      0 2px 8px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
   .glass-panel {
     @apply glass;
     padding: 1.25rem;

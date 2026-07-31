@@ -215,7 +215,16 @@ class ApiClient {
 
   // Version
   getVersion() {
-    return this.get<{ version: string; buildTime: string; nodeEnv: string }>("/api/version");
+    return this.get<{
+      version: string;
+      commit: string;
+      commitUrl: string | null;
+      repoUrl: string;
+      changelogUrl: string;
+      releasesUrl: string;
+      buildTime: string;
+      nodeEnv: string;
+    }>("/api/version");
   }
 }
 

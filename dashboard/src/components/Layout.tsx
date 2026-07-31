@@ -137,9 +137,39 @@ export default function Layout() {
             <Icon name="logout" size={17} />
             Log out
           </button>
-          <p className="px-3 pt-1.5 text-[10px] display text-ink-faint">
-            {version?.version ? `v${version.version}` : "…"}
-          </p>
+          {/* Fixed-width identifiers only: the raw commit SHA used to be printed
+              here in full and overran the sidebar into the page. */}
+          <div className="px-3 pt-2 flex items-center gap-1.5 text-[10px] display text-ink-faint">
+            {version?.version ? (
+              <>
+                <a
+                  href={version.changelogUrl ?? version.repoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:text-accent truncate"
+                  title="Changelog"
+                >
+                  v{version.version}
+                </a>
+                {version.commit && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <a
+                      href={version.commitUrl ?? version.repoUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="hover:text-accent truncate"
+                      title={`Commit ${version.commit}`}
+                    >
+                      {version.commit}
+                    </a>
+                  </>
+                )}
+              </>
+            ) : (
+              <span>…</span>
+            )}
+          </div>
         </div>
       </aside>
 

@@ -6,7 +6,7 @@ import { persist } from "zustand/middleware";
  * or follow the OS). Three presets x light/dark gives the six looks without
  * needing six separate definitions.
  */
-export type ThemePreset = "baby-pink" | "midnight-blue" | "emerald-tears";
+export type ThemePreset = "baby-pink" | "midnight-blue" | "emerald-tears" | "violet-whispers";
 export type ThemeMode = "light" | "dark" | "system";
 type ViewMode = "table" | "cards";
 
@@ -34,6 +34,12 @@ export const THEME_PRESETS: {
     label: "Emerald Tears",
     blurb: "Green & cyan",
     swatch: ["#04160f", "#00cc55", "#aaffee"],
+  },
+  {
+    id: "violet-whispers",
+    label: "Violet Whispers",
+    blurb: "Purple & blue",
+    swatch: ["#120a24", "#cc44cc", "#0088ff"],
   },
 ];
 

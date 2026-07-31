@@ -18,7 +18,7 @@ export default function ThemeSwitcher({ compact = false }: { compact?: boolean }
     <div className="space-y-3">
       <div>
         {!compact && <span className="label">Theme</span>}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {THEME_PRESETS.map((p) => {
             const active = p.id === preset;
             return (

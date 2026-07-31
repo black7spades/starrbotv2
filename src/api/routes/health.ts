@@ -3,11 +3,36 @@ import { configStore } from "config/index";
 import { execSync } from "child_process";
 import { register } from "utils/metrics";
 
-const gitHash = process.env.GIT_HASH || (() => {
+/**
+ * Build identity.
+ *
+ * The dashboard used to show the raw GIT_HASH, which CI sets to the full
+ * 40-character SHA — long enough to overrun the sidebar. Report the package
+ * version as the headline instead, with the commit abbreviated to 7 characters
+ * and accompanied by links so it stays clickable rather than just decorative.
+ */
+const REPO_URL = "https://github.com/black7spades/starrbotv2";
+
+const packageVersion: string = (() => {
   try {
-    return execSync("git rev-parse --short HEAD", { timeout: 3000 }).toString().trim();
-  } catch { return "unknown"; }
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    return String(require("../../../package.json").version ?? "0.0.0");
+  } catch {
+    return "0.0.0";
+  }
 })();
+
+const fullCommit = (() => {
+  if (process.env.GIT_HASH && process.env.GIT_HASH !== "unknown") return process.env.GIT_HASH;
+  try {
+    return execSync("git rev-parse HEAD", { timeout: 3000 }).toString().trim();
+  } catch {
+    return "";
+  }
+})();
+
+/** Abbreviated the way git and GitHub abbreviate. */
+const shortCommit = fullCommit ? fullCommit.slice(0, 7) : "";
 
 const buildTime = new Date().toISOString();
 
@@ -27,7 +52,12 @@ export const healthRoutes: FastifyPluginAsync = async (fastify: FastifyInstance)
   });
 
   fastify.get("/api/version", async () => ({
-    version: gitHash,
+    version: packageVersion,
+    commit: shortCommit,
+    commitUrl: fullCommit ? `${REPO_URL}/commit/${fullCommit}` : null,
+    repoUrl: REPO_URL,
+    changelogUrl: `${REPO_URL}/blob/main/CHANGELOG.md`,
+    releasesUrl: `${REPO_URL}/releases`,
     buildTime,
     nodeEnv: process.env.NODE_ENV || "development",
   }));

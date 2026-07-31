@@ -116,8 +116,8 @@ export async function createServer(): Promise<FastifyInstance> {
     // Every route in this group requires a valid session. Individual routes
     // additionally use `requireAdmin` for writes. Using `optionalAuth` here
     // left all GET routes readable by anonymous callers — including
-    // /api/bots/:id, which returns per-function config (Instagram session
-    // cookies and similar secrets) in plaintext.
+    // /api/bots/:id, which returns per-function config (session cookies,
+    // tokens and similar secrets) in plaintext.
     fastify.addHook("onRequest", authMiddleware);
 
     await fastify.register(userRoutes, { prefix: "/api/users" });
