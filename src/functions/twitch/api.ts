@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { systemLog } from "utils/systemLog";
 
 /**
@@ -42,6 +43,14 @@ export const SUBSCRIPTION_TYPES = {
   offline: { type: "stream.offline", version: "1" },
   update: { type: "channel.update", version: "2" },
 } as const;
+
+/**
+ * Non-reversible fingerprint of a secret, safe to persist next to the config.
+ * Only ever compared against another fingerprint.
+ */
+export function fingerprintSecret(secret: string): string {
+  return createHash("sha256").update(secret).digest("hex").slice(0, 16);
+}
 
 export class TwitchApi {
   private token: string | null = null;
@@ -194,9 +203,27 @@ export class TwitchApi {
     callback: string;
     secret: string;
     types?: { type: string; version: string }[];
-  }): Promise<{ created: string[]; kept: string[]; removed: string[] }> {
+    /**
+     * Fingerprint of the secret the last run subscribed with. When it differs,
+     * every matching subscription is recreated: Twitch keeps signing with the
+     * secret a subscription was created with and never tells us what that was,
+     * so a rotated secret leaves subscriptions looking perfectly healthy while
+     * every delivery fails signature verification.
+     */
+    previousSecretFingerprint?: string | null;
+  }): Promise<{ created: string[]; kept: string[]; removed: string[]; secretFingerprint: string }> {
     const wanted = opts.types ?? Object.values(SUBSCRIPTION_TYPES);
     const existing = await this.listSubscriptions();
+
+    const secretFingerprint = fingerprintSecret(opts.secret);
+    const secretRotated =
+      opts.previousSecretFingerprint !== undefined &&
+      opts.previousSecretFingerprint !== null &&
+      opts.previousSecretFingerprint !== secretFingerprint;
+
+    if (secretRotated) {
+      log("warn", "EventSub secret changed since last run — recreating subscriptions");
+    }
 
     const created: string[] = [];
     const kept: string[] = [];
@@ -208,9 +235,9 @@ export class TwitchApi {
           s.type === want.type && s.condition?.broadcaster_user_id === opts.broadcasterUserId
       );
 
-      const healthy = matches.find(
-        (s) => s.transport?.callback === opts.callback && s.status === "enabled"
-      );
+      const healthy = secretRotated
+        ? undefined
+        : matches.find((s) => s.transport?.callback === opts.callback && s.status === "enabled");
 
       // Drop anything for this type that we are not keeping: wrong callback,
       // revoked, or failed verification.
@@ -243,6 +270,6 @@ export class TwitchApi {
       }
     }
 
-    return { created, kept, removed };
+    return { created, kept, removed, secretFingerprint };
   }
 }

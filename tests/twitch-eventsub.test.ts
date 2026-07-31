@@ -227,3 +227,18 @@ describe("parseEvent", () => {
     expect(parseEvent({}).broadcasterUserId).toBeUndefined();
   });
 });
+
+describe("fingerprintSecret", () => {
+  it("is stable for the same secret and differs for another", async () => {
+    const { fingerprintSecret } = await import("functions/twitch/api");
+    expect(fingerprintSecret("secret-one")).toBe(fingerprintSecret("secret-one"));
+    expect(fingerprintSecret("secret-one")).not.toBe(fingerprintSecret("secret-two"));
+  });
+
+  it("does not leak the secret", async () => {
+    const { fingerprintSecret } = await import("functions/twitch/api");
+    const secret = "a-very-recognisable-secret";
+    expect(fingerprintSecret(secret)).not.toContain(secret);
+    expect(fingerprintSecret(secret)).toMatch(/^[0-9a-f]{16}$/);
+  });
+});
