@@ -2,10 +2,37 @@ import type { FunctionManifest, FunctionInstance } from "../registry/types";
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { systemLog } from "utils/systemLog";
 import { TwitchApi, SUBSCRIPTION_TYPES } from "./api";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
+import { join } from "path";
 import { twitchEvents, type TwitchNotification } from "./events";
 
 function log(level: "info" | "warn" | "error", msg: string) {
   systemLog.add(level, msg, "twitch");
+}
+
+const DATA_DIR = process.env.STARRBOT_DATA_DIR || join(__dirname, "../../../data");
+const STATE_FILE = join(DATA_DIR, "twitch-state.json");
+
+/**
+ * Records the fingerprint of the secret each broadcaster was subscribed with,
+ * so a rotated secret can be detected across a restart.
+ */
+function readState(): Record<string, string> {
+  try {
+    if (existsSync(STATE_FILE)) return JSON.parse(readFileSync(STATE_FILE, "utf8"));
+  } catch {
+    // A corrupt state file just means we re-subscribe once.
+  }
+  return {};
+}
+
+function writeState(state: Record<string, string>): void {
+  try {
+    mkdirSync(DATA_DIR, { recursive: true });
+    writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+  } catch (err: any) {
+    log("warn", `could not persist Twitch state: ${err.message}`);
+  }
 }
 
 /** Where Twitch should POST events. Derived from the same BASE_URL Discord OAuth uses. */
@@ -184,11 +211,16 @@ const twitchManifest: FunctionManifest = {
         }
         broadcasterId = user.id;
 
+        const state = readState();
         const result = await api.ensureSubscriptions({
           broadcasterUserId: user.id,
           callback,
           secret,
+          previousSecretFingerprint: state[user.id] ?? null,
         });
+        state[user.id] = result.secretFingerprint;
+        writeState(state);
+
         log(
           "info",
           `subscriptions for ${login}: created=${result.created.length} kept=${result.kept.length} removed=${result.removed.length}`
