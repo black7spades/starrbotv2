@@ -13,6 +13,8 @@ import type { StreamOnlineEvent, ChannelUpdateEvent } from "./eventsub";
 export interface TwitchNotification {
   subscriptionType: string;
   broadcasterUserId: string;
+  /** True when produced by the built-in self-test rather than by Twitch. */
+  isTest?: boolean;
   event: StreamOnlineEvent & ChannelUpdateEvent;
 }
 

@@ -87,39 +87,28 @@ for `EventSub callback verified`, which is Twitch completing the handshake.
 
 ### Testing without going live
 
-Use the [Twitch CLI](https://dev.twitch.tv/docs/cli/). You need the signing
-secret, which the container generates for you — read it out first:
+The app tests itself — you do not need the Twitch CLI, and you never need to
+read the signing secret out of the container.
 
-```bash
-docker compose exec bot printenv TWITCH_EVENTSUB_SECRET
-```
+**In the dashboard:** open **Playground → Twitch**. Below the form is an
+**Integration check** panel that reports, line by line, whether the Twitch
+application, signing secret and callback URL are set up, whether the channel
+resolves, and — most usefully — what Twitch itself thinks of each subscription.
+That last part is the real answer to "can Twitch reach me", because a
+subscription only becomes `enabled` after Twitch completes its verification
+handshake against your callback.
 
-**PowerShell** (one line — PowerShell does not understand `\` line
-continuations, and uses `$env:NAME` rather than `$NAME`):
+**Send a test announcement** signs a synthetic go-live and POSTs it to your real
+public callback URL, exactly as Twitch would. It deliberately goes over the
+network rather than short-circuiting internally, so it exercises DNS, TLS, any
+reverse proxy, the route, signature verification, dispatch and the Discord post
+— a short-circuit test would pass while Twitch still could not reach you.
 
-```powershell
-twitch event trigger stream.online -F https://your-domain/api/twitch/eventsub -s "PASTE_SECRET_HERE"
-```
+The test message is clearly labelled and **never pings your notification role**,
+so it cannot be mistaken for a real go-live or train people to ignore alerts.
 
-If you would rather split it across lines in PowerShell, the continuation
-character is a backtick:
-
-```powershell
-twitch event trigger stream.online `
-  -F https://your-domain/api/twitch/eventsub `
-  -s "PASTE_SECRET_HERE"
-```
-
-**bash / zsh:**
-
-```bash
-twitch event trigger stream.online \
-  -F https://your-domain/api/twitch/eventsub \
-  -s "$(docker compose exec -T bot printenv TWITCH_EVENTSUB_SECRET | tr -d '\r')"
-```
-
-A successful trigger posts a go-live announcement to the configured Discord
-channel, exactly as a real stream start would.
+**From Discord:** `/twitch test` runs the same checks and replies with the
+results, privately.
 
 ## How the callback is secured
 

@@ -165,16 +165,27 @@ export interface ChannelUpdateEvent {
   categoryName?: string;
 }
 
+/**
+ * Marker the built-in self-test puts on its payload. Twitch only ever sends
+ * documented statuses ("enabled", "authorization_revoked", ...), so this cannot
+ * collide with a real notification — which matters, because an announcement
+ * labelled as a test must never be triggerable by Twitch itself, and a real
+ * go-live must never be mislabelled as a test.
+ */
+export const TEST_STATUS = "starrbot_self_test";
+
 /** Normalises Twitch's snake_case event payload into our camelCase shape. */
 export function parseEvent(body: any): {
   subscriptionType?: string;
   broadcasterUserId?: string;
+  isTest: boolean;
   event: StreamOnlineEvent & ChannelUpdateEvent;
 } {
   const e = body?.event ?? {};
   return {
     subscriptionType: body?.subscription?.type,
     broadcasterUserId: e.broadcaster_user_id,
+    isTest: body?.subscription?.status === TEST_STATUS,
     event: {
       broadcasterUserId: e.broadcaster_user_id,
       broadcasterUserLogin: e.broadcaster_user_login,

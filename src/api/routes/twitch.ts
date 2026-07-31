@@ -81,6 +81,7 @@ export const twitchRoutes: FastifyPluginAsync = async (fastify: FastifyInstance)
     twitchEvents.publish({
       subscriptionType: parsed.subscriptionType,
       broadcasterUserId: parsed.broadcasterUserId,
+      isTest: parsed.isTest,
       event: parsed.event,
     });
 
