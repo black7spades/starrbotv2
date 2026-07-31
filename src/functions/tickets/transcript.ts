@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync, renameSync } from "fs";
+import { mkdirSync, writeFileSync, renameSync, readdirSync, statSync, unlinkSync } from "fs";
 import { join } from "path";
 
 // Mirrors the override in src/config/store.ts so tests can redirect writes.
@@ -188,4 +188,61 @@ export async function collectMessages(
 
   // Batches arrive newest-first; sort ascending for a readable transcript.
   return collected.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+}
+
+export interface TranscriptUsage {
+  files: number;
+  bytes: number;
+  oldest: number | null;
+}
+
+/** Current size of the transcript directory, for the storage report. */
+export function transcriptUsage(): TranscriptUsage {
+  try {
+    const names = readdirSync(TRANSCRIPT_DIR).filter((n) => n.endsWith(".md"));
+    let bytes = 0;
+    let oldest: number | null = null;
+    for (const name of names) {
+      try {
+        const s = statSync(join(TRANSCRIPT_DIR, name));
+        bytes += s.size;
+        if (oldest === null || s.mtimeMs < oldest) oldest = s.mtimeMs;
+      } catch {
+        // A file removed between listing and stat is not an error.
+      }
+    }
+    return { files: names.length, bytes, oldest };
+  } catch {
+    return { files: 0, bytes: 0, oldest: null };
+  }
+}
+
+/**
+ * Deletes transcripts older than `maxAgeDays`.
+ *
+ * Transcripts are the durable record of a ticket, so this is opt-in: it only
+ * runs when a retention period is configured. Zero or a negative value keeps
+ * everything forever, which is the default.
+ */
+export function pruneTranscripts(maxAgeDays: number, now: number = Date.now()): number {
+  if (!Number.isFinite(maxAgeDays) || maxAgeDays <= 0) return 0;
+  const cutoff = now - maxAgeDays * 86_400_000;
+  let removed = 0;
+  try {
+    for (const name of readdirSync(TRANSCRIPT_DIR)) {
+      if (!name.endsWith(".md")) continue;
+      const full = join(TRANSCRIPT_DIR, name);
+      try {
+        if (statSync(full).mtimeMs < cutoff) {
+          unlinkSync(full);
+          removed++;
+        }
+      } catch {
+        // Skip anything that vanished or cannot be read.
+      }
+    }
+  } catch {
+    // No directory yet means nothing to prune.
+  }
+  return removed;
 }

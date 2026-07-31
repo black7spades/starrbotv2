@@ -16,6 +16,14 @@ services:
       # Twitch go-live announcements — see docs/twitch-setup.md
       - TWITCH_CLIENT_ID=${TWITCH_CLIENT_ID:-}
       - TWITCH_CLIENT_SECRET=${TWITCH_CLIENT_SECRET:-}
+      # Storage retention — see docs/storage-and-logs.md. The defaults are
+      # sensible; these only exist for a tighter disk budget.
+      # - LOG_MAX_ENTRIES=5000
+      # - LOG_MAX_BYTES=4194304
+      # - LOG_MAX_AGE_DAYS=14
+      # Deletes ticket transcripts older than N days. Unset keeps them forever,
+      # which is the default: a transcript is the only record of a ticket.
+      # - TRANSCRIPT_MAX_AGE_DAYS=180
       # Optional: override auto-generated secrets. Names must match what the
       # app/entrypoint read — JWT_ACCESS_SECRET, not JWT_SECRET.
       # - JWT_ACCESS_SECRET=your-custom-access-secret
@@ -23,6 +31,13 @@ services:
       # - COOKIE_SECRET=your-custom-cookie-secret
     networks:
       - starrbot-network
+    # Docker's default json-file driver has NO size limit, so container stdout
+    # grows until the disk is full. This caps it at 30 MB total per container.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     labels:
       - "dockhand.enable=true"
       - "dockhand.name=StarrBot v2"

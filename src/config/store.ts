@@ -329,11 +329,21 @@ export class ConfigStore {
   }
 
   // Ticket logs
+  //
+  // Capped: logTicket used to append without limit, so a busy server grew this
+  // file forever. The cap is generous because purge reads from here, and the
+  // transcript on disk remains the durable record either way.
+  private static readonly MAX_TICKET_LOGS = 5000;
+
   logTicket(entry: Omit<TicketLog, "closedAt">): TicketLog {
     const tickets = readJson<TicketLog[]>(TICKETS_LOG_FILE, []);
     const record: TicketLog = { ...entry, closedAt: Date.now() };
     tickets.push(record);
-    writeJson(TICKETS_LOG_FILE, tickets);
+    const capped =
+      tickets.length > ConfigStore.MAX_TICKET_LOGS
+        ? tickets.slice(-ConfigStore.MAX_TICKET_LOGS)
+        : tickets;
+    writeJson(TICKETS_LOG_FILE, capped);
     return record;
   }
 
