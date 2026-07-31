@@ -57,6 +57,7 @@
    ========================================================================== */
 
 [data-theme="baby-pink"][data-mode="dark"] {
+  --popover: rgba(38, 20, 36, 0.94);
   --bg-base: #1a0d1a;
   --bg-glow-a: rgba(204, 68, 204, 0.34);
   --bg-glow-b: rgba(255, 119, 119, 0.24);
@@ -80,6 +81,7 @@
 }
 
 [data-theme="baby-pink"][data-mode="light"] {
+  --popover: rgba(255, 250, 253, 0.95);
   --bg-base: #fdf2f9;
   --bg-glow-a: rgba(204, 68, 204, 0.2);
   --bg-glow-b: rgba(255, 119, 119, 0.18);
@@ -107,6 +109,7 @@
    ========================================================================== */
 
 [data-theme="midnight-blue"][data-mode="dark"] {
+  --popover: rgba(12, 17, 42, 0.94);
   --bg-base: #05061c;
   --bg-glow-a: rgba(0, 136, 255, 0.32);
   --bg-glow-b: rgba(0, 0, 170, 0.42);
@@ -130,6 +133,7 @@
 }
 
 [data-theme="midnight-blue"][data-mode="light"] {
+  --popover: rgba(250, 252, 255, 0.95);
   --bg-base: #eef4fd;
   --bg-glow-a: rgba(0, 136, 255, 0.22);
   --bg-glow-b: rgba(0, 0, 170, 0.14);
@@ -157,6 +161,7 @@
    ========================================================================== */
 
 [data-theme="emerald-tears"][data-mode="dark"] {
+  --popover: rgba(8, 32, 22, 0.94);
   --bg-base: #04160f;
   --bg-glow-a: rgba(0, 204, 85, 0.28);
   --bg-glow-b: rgba(170, 255, 238, 0.2);
@@ -180,6 +185,7 @@
 }
 
 [data-theme="emerald-tears"][data-mode="light"] {
+  --popover: rgba(248, 254, 251, 0.95);
   --bg-base: #eefaf3;
   --bg-glow-a: rgba(0, 204, 85, 0.2);
   --bg-glow-b: rgba(170, 255, 238, 0.34);
@@ -200,6 +206,58 @@
   --accent-soft: #0d8f86;
   --accent-contrast: #ffffff;
   --ring: rgba(10, 125, 67, 0.4);
+}
+
+/* ==========================================================================
+   Violet Whispers — purple over blue
+   ========================================================================== */
+
+[data-theme="violet-whispers"][data-mode="dark"] {
+  --popover: rgba(24, 16, 46, 0.94);
+  --bg-base: #120a24;
+  --bg-glow-a: rgba(204, 68, 204, 0.28);
+  --bg-glow-b: rgba(0, 0, 170, 0.42);
+  --bg-glow-c: rgba(0, 136, 255, 0.18);
+
+  --surface: rgba(224, 210, 255, 0.07);
+  --surface-strong: rgba(224, 210, 255, 0.12);
+  --surface-hover: rgba(224, 210, 255, 0.16);
+  --surface-solid: #1d1338;
+  --border: rgba(196, 170, 255, 0.2);
+  --border-strong: rgba(196, 170, 255, 0.38);
+
+  --text: #f0e9ff;
+  --text-muted: #b9a8d8;
+  --text-faint: #8574a6;
+
+  --accent: var(--c64-purple);
+  --accent-soft: var(--c64-light-blue);
+  --accent-contrast: #ffffff;
+  --ring: rgba(204, 68, 204, 0.55);
+}
+
+[data-theme="violet-whispers"][data-mode="light"] {
+  --popover: rgba(252, 250, 255, 0.95);
+  --bg-base: #f5f1fd;
+  --bg-glow-a: rgba(204, 68, 204, 0.18);
+  --bg-glow-b: rgba(0, 0, 170, 0.12);
+  --bg-glow-c: rgba(0, 136, 255, 0.2);
+
+  --surface: rgba(255, 255, 255, 0.62);
+  --surface-strong: rgba(255, 255, 255, 0.8);
+  --surface-hover: rgba(255, 255, 255, 0.92);
+  --surface-solid: #ffffff;
+  --border: rgba(88, 40, 140, 0.16);
+  --border-strong: rgba(88, 40, 140, 0.3);
+
+  --text: #241043;
+  --text-muted: #5b3d8a;
+  --text-faint: #8874ab;
+
+  --accent: #7b2fb5;
+  --accent-soft: #2f6fd0;
+  --accent-contrast: #ffffff;
+  --ring: rgba(123, 47, 181, 0.4);
 }
 
 /* Let the browser style scrollbars and form controls to match the mode. */

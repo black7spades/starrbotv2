@@ -1,16 +1,17 @@
 import { useEffect, useState, useRef } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { api } from "../api/client";
+import Icon, { type IconName } from "./Icon";
 
 interface BotTabsProps {
   activeTab: string;
   bot: any;
 }
 
-const tabs = [
-  { id: "overview", label: "Overview", icon: "📊" },
-  { id: "functions", label: "Functions", icon: "🔧" },
-  { id: "logs", label: "Logs", icon: "📋" },
+const tabs: { id: string; label: string; icon: IconName }[] = [
+  { id: "overview", label: "Overview", icon: "dashboard" },
+  { id: "functions", label: "Functions", icon: "playground" },
+  { id: "logs", label: "Logs", icon: "logs" },
 ];
 
 export function BotTabs({ activeTab, bot }: BotTabsProps) {
@@ -28,7 +29,7 @@ export function BotTabs({ activeTab, bot }: BotTabsProps) {
             }`}
           >
             <span className="flex items-center gap-1.5">
-              <span>{tab.icon}</span>
+              <Icon name={tab.icon} size={15} />
               {tab.label}
             </span>
           </NavLink>
@@ -78,8 +79,15 @@ function OverviewTab({ bot }: { bot: any }) {
   );
 }
 
+/**
+ * Read-only view of what this bot is running.
+ *
+ * Editing deliberately does not happen here. Functions are configured in one
+ * place — the Playground — because two editors for the same config drift apart
+ * and it stops being obvious which one is authoritative. Each card links into
+ * the Playground with this function and this bot already selected.
+ */
 function FunctionsTab({ bot }: { bot: any }) {
-  const navigate = useNavigate();
   const [manifests, setManifests] = useState<any[]>([]);
 
   useEffect(() => {
@@ -88,10 +96,10 @@ function FunctionsTab({ bot }: { bot: any }) {
 
   const botFnMap = new Map<string, any>((bot.functions || []).map((f: any) => [f.functionName, f]));
 
-  if (manifests.length === 0 && (!bot.functions || bot.functions.length === 0)) {
+  if (manifests.length === 0) {
     return (
-      <div className="text-center py-12 text-discord-muted">
-        <p className="text-xl mb-2">No functions available</p>
+      <div className="text-center py-12 text-ink-muted">
+        <p className="text-lg mb-1">No functions available</p>
         <p className="text-sm">No function packages are installed on this server.</p>
       </div>
     );
@@ -99,46 +107,58 @@ function FunctionsTab({ bot }: { bot: any }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-sm text-ink-muted">
+          What <span className="text-ink font-medium">{bot.name}</span> is running. Configure in the
+          Playground.
+        </p>
+        <NavLink to={`/playground?bot=${encodeURIComponent(bot.id)}`} className="btn-secondary text-xs">
+          Open Playground
+        </NavLink>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
         {manifests.map((m: any) => {
           const existing = botFnMap.get(m.name);
           const enabled = existing?.enabled ?? false;
+          const state = !existing ? "off" : enabled ? "on" : "paused";
+          const colour =
+            state === "on"
+              ? "var(--status-running)"
+              : state === "paused"
+                ? "var(--status-starting)"
+                : "var(--status-stopped)";
+
           return (
-            <button
+            <NavLink
               key={m.name}
-              onClick={() => navigate(`/bots/${bot.id}/functions/${m.name}`)}
-              className="text-left p-4 bg-discord-card rounded-xl border border-discord-border hover:border-discord-accent/50 transition-colors"
+              to={`/playground?function=${encodeURIComponent(m.name)}&bot=${encodeURIComponent(bot.id)}`}
+              className="glass glass-hover p-4 block"
             >
-                <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-2xl shrink-0">{m.icon || "🔧"}</span>
-                  <div className="min-w-0">
-                    <h3 className="font-semibold truncate">{m.label}</h3>
-                    <p className="text-sm text-discord-muted line-clamp-2">{m.description}</p>
-                    {m.commands && m.commands.length > 0 && (
-                      <div className="mt-1.5 flex flex-wrap gap-1">
-                        {m.commands.map((cmd: any) => (
-                          <span key={cmd.name} className="px-1.5 py-0.5 bg-discord-accent/10 text-discord-accent rounded text-xs font-mono">
-                            /{cmd.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="font-semibold truncate text-ink">{m.label}</h3>
+                  <p className="text-sm mt-0.5 text-ink-muted line-clamp-2">{m.description}</p>
+                  {m.commands?.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {m.commands.map((cmd: any) => (
+                        <span key={cmd.name} className="chip display !text-[10px]">
+                          /{cmd.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {existing ? (
-                  <span className={`shrink-0 px-2 py-1 rounded text-xs font-medium ${
-                    enabled ? "bg-discord-green/20 text-discord-green" : "bg-discord-muted/20 text-discord-muted"
-                  }`}>
-                    {enabled ? "Enabled" : "Disabled"}
-                  </span>
-                ) : (
-                  <span className="shrink-0 px-2 py-1 rounded text-xs font-medium bg-discord-accent/20 text-discord-accent">
-                    Add
-                  </span>
-                )}
+                <span className="chip shrink-0" style={{ color: colour }}>
+                  <span
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ background: colour }}
+                    aria-hidden="true"
+                  />
+                  {state === "on" ? "Enabled" : state === "paused" ? "Configured" : "Not set up"}
+                </span>
               </div>
-            </button>
+            </NavLink>
           );
         })}
       </div>

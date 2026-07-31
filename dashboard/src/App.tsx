@@ -6,7 +6,6 @@ import Login from "./pages/Login";
 import DiscordCallback from "./pages/DiscordCallback";
 import Dashboard from "./pages/Dashboard";
 import BotDetail from "./pages/BotDetail";
-import FunctionConfig from "./pages/FunctionConfig";
 import CreateBot from "./pages/CreateBot";
 import EditBot from "./pages/EditBot";
 import Settings from "./pages/Settings";
@@ -44,7 +43,8 @@ function App() {
           <Route path="/logs" element={<Logs />} />
           <Route path="/bots/:id/functions" element={<BotDetail />} />
           <Route path="/bots/:id/logs" element={<BotDetail />} />
-          <Route path="/bots/:botId/functions/:name" element={<FunctionConfig />} />
+          {/* Functions are edited in one place only — the Playground. */}
+          <Route path="/bots/:botId/functions/:name" element={<Navigate to="/playground" replace />} />
           <Route path="/bots/:id" element={<BotDetail />} />
           <Route path="/settings" element={<Settings />} />
         </Route>

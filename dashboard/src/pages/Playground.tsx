@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import Icon, { type IconName } from "../components/Icon";
 import SourceBuilder from "../components/SourceBuilder";
@@ -17,7 +18,6 @@ import SourceBuilder from "../components/SourceBuilder";
 const FUNCTION_ICON: Record<string, IconName> = {
   updates: "rss",
   tickets: "ticket",
-  instagram: "camera",
   twitch: "twitch",
 };
 
@@ -32,9 +32,15 @@ interface Manifest {
 
 export default function Playground() {
   const queryClient = useQueryClient();
-  const [selectedFn, setSelectedFn] = useState<string | null>(null);
+  // Deep links from a bot's Functions tab arrive as ?function=&bot=, so the
+  // page opens on exactly what the user clicked.
+  const [searchParams] = useSearchParams();
+  const [selectedFn, setSelectedFn] = useState<string | null>(searchParams.get("function"));
   const [config, setConfig] = useState<Record<string, any>>({});
-  const [targets, setTargets] = useState<Set<string>>(new Set());
+  const [targets, setTargets] = useState<Set<string>>(() => {
+    const bot = searchParams.get("bot");
+    return new Set(bot ? [bot] : []);
+  });
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
 
@@ -60,11 +66,33 @@ export default function Playground() {
     if (!selectedFn && manifests.length) setSelectedFn(manifests[0].name);
   }, [manifests, selectedFn]);
 
-  // Seed the editor from the manifest defaults when the function changes.
+  // Seed the editor when the function changes: from the deep-linked bot's saved
+  // config if there is one, otherwise from the manifest defaults.
   useEffect(() => {
     if (!manifest) return;
-    setConfig({ ...(manifest.defaultConfig ?? {}) });
     setResult(null);
+    const linkedBot = searchParams.get("bot");
+    if (!linkedBot) {
+      setConfig({ ...(manifest.defaultConfig ?? {}) });
+      return;
+    }
+    let cancelled = false;
+    setConfig({ ...(manifest.defaultConfig ?? {}) });
+    api
+      .getBot(linkedBot)
+      .then((bot) => {
+        if (cancelled) return;
+        const existing = bot.functions?.find((f: any) => f.functionName === manifest.name);
+        if (existing?.config) {
+          setConfig({ ...(manifest.defaultConfig ?? {}), ...existing.config });
+        }
+      })
+      .catch(() => {
+        // Falling back to defaults is fine; the user can still edit and save.
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [manifest?.name]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fields = Object.entries(manifest?.configSchema?.properties ?? {});

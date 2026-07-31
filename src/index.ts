@@ -4,7 +4,6 @@ import { botManager } from "discord/manager";
 import { functionRegistry, registerFunction } from "functions/registry/index";
 import { updatesManifest } from "functions/updates/index";
 import { ticketsManifest } from "functions/tickets/index";
-import { instagramManifest } from "functions/instagram/index";
 import { twitchManifest } from "functions/twitch/index";
 import { logger } from "utils/logger";
 
@@ -29,7 +28,6 @@ async function main(): Promise<void> {
   // Initialize function registry (loads built-in functions)
   registerFunction(updatesManifest);
   registerFunction(ticketsManifest);
-  registerFunction(instagramManifest);
   registerFunction(twitchManifest);
   logger.info("Function registry loaded", { functions: functionRegistry.getAllManifests().map(f => f.name) });
 

@@ -79,28 +79,28 @@ export default function ProfileMenu() {
       </button>
 
       {open && (
-        <div
-          role="menu"
-          className="glass-strong absolute right-0 mt-2 w-80 p-3 z-50"
-          style={{ borderRadius: "var(--radius-lg)" }}
-        >
-          {panel === "menu" && (
-            <MenuPanel
-              onProfile={() => setPanel("profile")}
-              onPassword={() => setPanel("password")}
-            />
-          )}
-          {panel === "profile" && (
-            <ProfilePanel
-              onBack={() => setPanel("menu")}
-              onSaved={(u) => {
-                setUser({ ...(user as any), ...u });
-                setPanel("menu");
-              }}
-            />
-          )}
-          {panel === "password" && <PasswordPanel onBack={() => setPanel("menu")} />}
-        </div>
+        <>
+          {/* Dims the page behind the menu so it stops competing for attention. */}
+          <div className="fixed inset-0 z-40 bg-black/25" aria-hidden="true" />
+          <div role="menu" className="glass-popover absolute right-0 mt-2 w-80 p-3 z-50">
+            {panel === "menu" && (
+              <MenuPanel
+                onProfile={() => setPanel("profile")}
+                onPassword={() => setPanel("password")}
+              />
+            )}
+            {panel === "profile" && (
+              <ProfilePanel
+                onBack={() => setPanel("menu")}
+                onSaved={(u) => {
+                  setUser({ ...(user as any), ...u });
+                  setPanel("menu");
+                }}
+              />
+            )}
+            {panel === "password" && <PasswordPanel onBack={() => setPanel("menu")} />}
+          </div>
+        </>
       )}
     </div>
   );
