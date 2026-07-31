@@ -5,6 +5,8 @@ import { functionRegistry, registerFunction } from "functions/registry/index";
 import { updatesManifest } from "functions/updates/index";
 import { ticketsManifest } from "functions/tickets/index";
 import { twitchManifest } from "functions/twitch/index";
+import { welcomeManifest } from "functions/welcome/index";
+import { subsManifest } from "functions/subs/index";
 import { logger } from "utils/logger";
 
 // Auto-start enabled bots on startup
@@ -29,6 +31,8 @@ async function main(): Promise<void> {
   registerFunction(updatesManifest);
   registerFunction(ticketsManifest);
   registerFunction(twitchManifest);
+  registerFunction(welcomeManifest);
+  registerFunction(subsManifest);
   logger.info("Function registry loaded", { functions: functionRegistry.getAllManifests().map(f => f.name) });
 
   // Start API server

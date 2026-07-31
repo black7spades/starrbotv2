@@ -8,6 +8,10 @@ export interface FunctionInstance {
   onUnload?(): Promise<void>;
   onConfigChange?(newConfig: Record<string, unknown>): Promise<void>;
   onMessage?(message: any, bot: any, context: any): Promise<void>;
+  /** A member joined the guild. Requires the privileged GuildMembers intent. */
+  onMemberJoin?(member: any, bot: any, context: any): Promise<void>;
+  /** A member's roles or profile changed. Requires the GuildMembers intent. */
+  onMemberUpdate?(before: any, after: any, bot: any, context: any): Promise<void>;
   getStats(): Record<string, unknown>;
   handleCommand?(interaction: any, bot: any, context: any): Promise<void>;
 }

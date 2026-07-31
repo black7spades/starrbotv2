@@ -35,6 +35,8 @@ export type IconName =
   | "ticket"
   | "camera"
   | "twitch"
+  | "wave"
+  | "badge"
   | "search"
   | "alert"
   | "spinner";
@@ -164,6 +166,20 @@ const PATHS: Record<IconName, JSX.Element> = {
     <>
       <path d="M4 4h16v10l-4 4h-4l-3 3v-3H4z" />
       <path d="M11 8v4M15 8v4" />
+    </>
+  ),
+  wave: (
+    <>
+      <path d="M7 11V5.5a1.5 1.5 0 0 1 3 0V11" />
+      <path d="M10 10.5v-6a1.5 1.5 0 0 1 3 0V11" />
+      <path d="M13 10.5V6a1.5 1.5 0 0 1 3 0v6" />
+      <path d="M16 9.5a1.5 1.5 0 0 1 3 0V13a7 7 0 0 1-7 7h-1a6 6 0 0 1-6-6v-3a1.5 1.5 0 0 1 3 0" />
+    </>
+  ),
+  badge: (
+    <>
+      <path d="M12 3l2.5 1.8 3-.2.6 3 2.4 1.9-1.4 2.7 1.4 2.7-2.4 1.9-.6 3-3-.2L12 21l-2.5-1.8-3 .2-.6-3L3.5 14.5 4.9 11.8 3.5 9.1l2.4-1.9.6-3 3 .2z" />
+      <path d="M9 12l2 2 4-4" />
     </>
   ),
   search: (

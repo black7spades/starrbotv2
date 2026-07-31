@@ -5,6 +5,7 @@ import { api } from "../api/client";
 import Icon, { type IconName } from "../components/Icon";
 import SourceBuilder from "../components/SourceBuilder";
 import TwitchDiagnostics from "../components/TwitchDiagnostics";
+import StringListField from "../components/StringListField";
 
 /**
  * One page to configure a function and put it on bots.
@@ -20,6 +21,8 @@ const FUNCTION_ICON: Record<string, IconName> = {
   updates: "rss",
   tickets: "ticket",
   twitch: "twitch",
+  welcome: "wave",
+  subs: "badge",
 };
 
 interface Manifest {
@@ -353,6 +356,25 @@ function Field({
   // The Updates `sources` array gets a purpose-built editor rather than raw JSON.
   if (schema.type === "array" && name === "sources") {
     return <SourceBuilder value={Array.isArray(value) ? value : []} onChange={onChange} />;
+  }
+
+  // A plain array of strings — the welcome phrase pool.
+  if (schema.type === "array" && schema.items?.type === "string") {
+    return (
+      <StringListField
+        label={label}
+        description={schema.description}
+        value={Array.isArray(value) ? value : []}
+        onChange={onChange}
+        placeholder="Add a phrase…"
+        hint={
+          <>
+            Placeholders: <code>{"{user}"}</code> <code>{"{username}"}</code>{" "}
+            <code>{"{server}"}</code> <code>{"{memberCount}"}</code>
+          </>
+        }
+      />
+    );
   }
 
   if (schema.type === "boolean") {

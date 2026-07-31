@@ -4,6 +4,29 @@ The version shown in the dashboard sidebar links here. It is the `version` from
 `package.json`, alongside the abbreviated commit the running image was built
 from.
 
+## 2.1.0
+
+### Added
+
+- **Subscriber sync** (`subs` v1.0.0) — mirrors Twitch subscribers onto a role
+  you name and control. Reacts live to role changes and reconciles everything on
+  a schedule, so nothing is missed while the bot is offline. `/subs status` and
+  `/subs sync`.
+- **Welcome** (`welcome` v1.0.0) — greets new members with a random phrase from
+  an editable pool, never repeating the same line twice in a row. The pool is
+  editable from the Playground or from Discord with `/welcome add|edit|remove|
+  list|preview`. Supports `{user}`, `{username}`, `{server}` and
+  `{memberCount}`.
+- **Twitch self-test and diagnostics** — the app checks its own integration and
+  can send a signed test go-live through the real callback. No CLI needed.
+- Function contract gains `onMemberJoin` and `onMemberUpdate` hooks.
+
+### Changed
+
+- Bots now request the **privileged `GuildMembers` intent**, which the two new
+  functions require. It must also be enabled for the application in the Discord
+  Developer Portal, or the gateway refuses the connection outright.
+
 ## Unreleased
 
 ### Added
