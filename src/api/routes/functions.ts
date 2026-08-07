@@ -148,11 +148,8 @@ export const functionRoutes: FastifyPluginAsync = async (fastify: FastifyInstanc
         return reply.code(404).send({ error: "Not Found", message: "Function not found" });
       }
 
-      if (request.body.config) {
-        const result = manifest.configSchema.safeParse(request.body.config);
-        if (!result.success) {
-          return reply.code(400).send({ error: "Bad Request", message: "Invalid config", details: result.error.flatten() });
-        }
+      if (request.body.config && typeof request.body.config !== "object") {
+        return reply.code(400).send({ error: "Bad Request", message: "Config must be an object" });
       }
 
       const updated = configStore.upsertBotFunction(botId, name, request.body);

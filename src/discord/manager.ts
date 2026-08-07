@@ -236,7 +236,7 @@ function createBotInstance(botConfig: Bot): ManagedBot {
           if (instance.manifest?.commands?.some((cmd: any) => cmd.name === commandName)) {
             try {
               if (instance.handleCommand) {
-                await instance.handleCommand(interaction, emitter as ManagedBot, { bot: emitter, client, config: botConfig });
+                await instance.handleCommand(interaction, result, { bot: result, client, config: botConfig });
               }
             } catch (err: any) {
               log("error", `Command error (${commandName}): ${err.message}`);
@@ -260,7 +260,7 @@ function createBotInstance(botConfig: Bot): ManagedBot {
       for (const [, instance] of functions) {
         if (instance.onMessage) {
           try {
-            await instance.onMessage(message, emitter as ManagedBot, { bot: emitter, client, config: botConfig });
+            await instance.onMessage(message, result, { bot: result, client, config: botConfig });
           } catch (err: any) {
             log("error", `Message handler error: ${err.message}`);
           }
@@ -272,8 +272,8 @@ function createBotInstance(botConfig: Bot): ManagedBot {
       for (const [, instance] of functions) {
         if (instance.onMemberJoin) {
           try {
-            await instance.onMemberJoin(member, emitter as ManagedBot, {
-              bot: emitter,
+            await instance.onMemberJoin(member, result, {
+              bot: result,
               client,
               config: botConfig,
             });
@@ -288,8 +288,8 @@ function createBotInstance(botConfig: Bot): ManagedBot {
       for (const [, instance] of functions) {
         if (instance.onMemberUpdate) {
           try {
-            await instance.onMemberUpdate(before, after, emitter as ManagedBot, {
-              bot: emitter,
+            await instance.onMemberUpdate(before, after, result, {
+              bot: result,
               client,
               config: botConfig,
             });
@@ -333,7 +333,7 @@ function createBotInstance(botConfig: Bot): ManagedBot {
               const instance = await manifest.createInstance({ ...bf.config, botId: bf.botId });
               instance.manifest = manifest;
               functions.set(bf.functionName, instance);
-              await instance.onLoad?.(emitter as ManagedBot, bf.config);
+              await instance.onLoad?.(result, bf.config);
               log("info", `Loaded function: ${bf.functionName}`);
             } catch (err: any) {
               log("error", `Failed to load function ${bf.functionName}: ${err.message}`);
@@ -394,7 +394,7 @@ function createBotInstance(botConfig: Bot): ManagedBot {
             const instance = await manifest.createInstance({ ...bf.config, botId: bf.botId });
             instance.manifest = manifest;
             functions.set(name, instance);
-            await instance.onLoad?.(emitter as ManagedBot, bf.config);
+            await instance.onLoad?.(result, bf.config);
             log("info", `Reloaded function: ${name}`);
           } catch (err: any) {
             log("error", `Failed to reload function ${name}: ${err.message}`);
