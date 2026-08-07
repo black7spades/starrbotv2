@@ -38,6 +38,7 @@ export interface DiagnosticsResult {
   ok: boolean;
   checks: Check[];
   callbackUrl: string;
+  broadcasterId: string | null;
 }
 
 function check(
@@ -213,6 +214,7 @@ export async function runDiagnostics(broadcasterLogin?: string): Promise<Diagnos
     ok: checks.every((c) => c.status === "pass" || c.status === "skip"),
     checks,
     callbackUrl: callback,
+    broadcasterId,
   };
 }
 
@@ -258,6 +260,7 @@ export async function runSelfTest(opts: {
   }
 
   const login = opts.broadcasterLogin || "teststreamer";
+  const bid = diagnostics.broadcasterId || "0";
   const body = JSON.stringify({
     subscription: {
       id: randomUUID(),
@@ -266,10 +269,10 @@ export async function runSelfTest(opts: {
       // Marks this as ours so the announcement is labelled a test. Twitch never
       // sends this status.
       status: TEST_STATUS,
-      condition: { broadcaster_user_id: "0" },
+      condition: { broadcaster_user_id: bid },
     },
     event: {
-      broadcaster_user_id: "0",
+      broadcaster_user_id: bid,
       broadcaster_user_login: login,
       broadcaster_user_name: opts.broadcasterUserName || login,
       started_at: new Date().toISOString(),
