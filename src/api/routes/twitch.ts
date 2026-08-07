@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 import { verifyRequest, parseEvent, SeenMessages, isValidSecret } from "functions/twitch/eventsub";
 import { twitchEvents } from "functions/twitch/events";
+import { setting } from "config/index";
 import { systemLog } from "utils/systemLog";
 
 /**
@@ -30,7 +31,7 @@ export const twitchRoutes: FastifyPluginAsync = async (fastify: FastifyInstance)
   );
 
   fastify.post("/eventsub", async (request, reply) => {
-    const secret = process.env.TWITCH_EVENTSUB_SECRET ?? "";
+    const secret = setting("twitchEventsubSecret");
     if (!isValidSecret(secret)) {
       log("error", "TWITCH_EVENTSUB_SECRET is unset or invalid; rejecting EventSub callback");
       return reply.code(503).send({ error: "Twitch integration is not configured" });

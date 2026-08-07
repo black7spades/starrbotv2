@@ -95,6 +95,12 @@ export type UpdateFunctionConfigInput = z.infer<typeof UpdateFunctionConfigSchem
 export const GlobalSettingsSchema = z.object({
   commandPrefix: z.string().default("!"),
   theme: z.enum(["light", "dark"]).default("dark"),
+  baseUrl: z.string().optional(),
+  discordClientId: z.string().optional(),
+  discordClientSecret: z.string().optional(),
+  twitchClientId: z.string().optional(),
+  twitchClientSecret: z.string().optional(),
+  twitchEventsubSecret: z.string().optional(),
 });
 export type GlobalSettings = z.infer<typeof GlobalSettingsSchema>;
 

@@ -1,6 +1,7 @@
 import type { FunctionManifest, FunctionInstance } from "../registry/types";
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { systemLog } from "utils/systemLog";
+import { setting } from "config/index";
 import { TwitchApi, SUBSCRIPTION_TYPES } from "./api";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
@@ -37,7 +38,7 @@ function writeState(state: Record<string, string>): void {
 
 /** Where Twitch should POST events. Derived from the same BASE_URL Discord OAuth uses. */
 export function callbackUrl(): string {
-  const base = (process.env.BASE_URL || "").replace(/\/+$/, "");
+  const base = setting("baseUrl").replace(/\/+$/, "");
   return `${base}/api/twitch/eventsub`;
 }
 
@@ -226,7 +227,7 @@ const twitchManifest: FunctionManifest = {
         return;
       }
 
-      const secret = process.env.TWITCH_EVENTSUB_SECRET ?? "";
+      const secret = setting("twitchEventsubSecret");
       const callback = callbackUrl();
       if (!callback.startsWith("https://")) {
         lastError = `BASE_URL must be a public https URL for Twitch to reach ${callback}`;

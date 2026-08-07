@@ -4,6 +4,78 @@ import { useAuthStore } from "../store/authStore";
 import ThemeSwitcher from "../components/ThemeSwitcher";
 import { useGuildStore } from "../store/guildStore";
 
+interface SettingsData {
+  baseUrl: string;
+  discordClientId: string;
+  discordClientSecret: string;
+  discordClientSecretSet: boolean;
+  twitchClientId: string;
+  twitchClientSecret: string;
+  twitchClientSecretSet: boolean;
+  twitchEventsubSecret: string;
+  twitchEventsubSecretSet: boolean;
+}
+
+function SecretField({
+  label,
+  value,
+  isSet,
+  onChange,
+  placeholder,
+  description,
+}: {
+  label: string;
+  value: string;
+  isSet: boolean;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  description?: string;
+}) {
+  const [visible, setVisible] = useState(false);
+  const isMasked = value.startsWith("••••");
+
+  return (
+    <div>
+      <label className="block text-sm font-medium mb-1">{label}</label>
+      {description && (
+        <p className="text-xs text-discord-muted mb-1.5">{description}</p>
+      )}
+      <div className="relative">
+        <input
+          type={visible || isMasked ? "text" : "password"}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={() => {
+            if (isMasked) onChange("");
+          }}
+          placeholder={placeholder || (isSet ? "Saved — click to change" : "Not set")}
+          className="w-full px-3 py-2 pr-10 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent font-mono text-sm"
+        />
+        {!isMasked && value && (
+          <button
+            type="button"
+            onClick={() => setVisible(!visible)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-discord-muted hover:text-discord-text transition-colors"
+            title={visible ? "Hide" : "Show"}
+          >
+            {visible ? (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
+                <line x1="1" y1="1" x2="23" y2="23" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            )}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Settings() {
   const { user } = useAuthStore();
   const { discordUser, guilds, clearDiscord } = useGuildStore();
@@ -16,9 +88,62 @@ export default function Settings() {
   const [editRole, setEditRole] = useState<"admin" | "viewer">("viewer");
   const [editPassword, setEditPassword] = useState("");
 
+  const [settings, setSettings] = useState<SettingsData | null>(null);
+  const [draft, setDraft] = useState<Partial<SettingsData>>({});
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
   useEffect(() => {
     api.getUsers().then(setUsers).catch(() => {});
+    api.getSettings().then((s: SettingsData) => {
+      setSettings(s);
+      setDraft({
+        baseUrl: s.baseUrl,
+        discordClientId: s.discordClientId,
+        discordClientSecret: s.discordClientSecret,
+        twitchClientId: s.twitchClientId,
+        twitchClientSecret: s.twitchClientSecret,
+        twitchEventsubSecret: s.twitchEventsubSecret,
+      });
+    }).catch(() => {});
   }, []);
+
+  const setField = (key: string, value: string) => {
+    setDraft((prev) => ({ ...prev, [key]: value }));
+    setSaved(false);
+  };
+
+  const hasChanges = settings && draft && (
+    draft.baseUrl !== settings.baseUrl ||
+    draft.discordClientId !== settings.discordClientId ||
+    draft.discordClientSecret !== settings.discordClientSecret ||
+    draft.twitchClientId !== settings.twitchClientId ||
+    draft.twitchClientSecret !== settings.twitchClientSecret ||
+    draft.twitchEventsubSecret !== settings.twitchEventsubSecret
+  );
+
+  const saveIntegration = async () => {
+    if (!draft) return;
+    setSaving(true);
+    try {
+      const updated = await api.updateSettings(draft) as SettingsData;
+      setSettings(updated);
+      setDraft({
+        baseUrl: updated.baseUrl,
+        discordClientId: updated.discordClientId,
+        discordClientSecret: updated.discordClientSecret,
+        twitchClientId: updated.twitchClientId,
+        twitchClientSecret: updated.twitchClientSecret,
+        twitchEventsubSecret: updated.twitchEventsubSecret,
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err: any) {
+      alert(err.message || "Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const createUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +192,110 @@ export default function Settings() {
           </div>
         </div>
       </section>
+
+      {/* Integration Settings */}
+      {settings && draft && (
+        <section className="p-6 bg-discord-card rounded-xl border border-discord-border">
+          <h2 className="text-lg font-semibold mb-1">Integration</h2>
+          <p className="text-sm text-discord-muted mb-6">
+            Credentials for Discord OAuth and Twitch EventSub. These can also be
+            set via environment variables — dashboard values take priority.
+          </p>
+
+          <div className="space-y-6">
+            {/* Base URL */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Base URL</label>
+              <p className="text-xs text-discord-muted mb-1.5">
+                Your public URL. Used for Discord OAuth redirect and Twitch EventSub callback.
+              </p>
+              <input
+                type="url"
+                value={draft.baseUrl ?? ""}
+                onChange={(e) => setField("baseUrl", e.target.value)}
+                placeholder="https://bot.yourdomain.com"
+                className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent font-mono text-sm"
+              />
+            </div>
+
+            <hr className="border-discord-border" />
+
+            {/* Discord */}
+            <div>
+              <h3 className="text-sm font-semibold text-discord-muted uppercase tracking-wider mb-3">Discord</h3>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Client ID</label>
+                  <input
+                    type="text"
+                    value={draft.discordClientId ?? ""}
+                    onChange={(e) => setField("discordClientId", e.target.value)}
+                    placeholder="Not set"
+                    className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent font-mono text-sm"
+                  />
+                </div>
+                <SecretField
+                  label="Client Secret"
+                  value={draft.discordClientSecret ?? ""}
+                  isSet={settings.discordClientSecretSet}
+                  onChange={(v) => setField("discordClientSecret", v)}
+                />
+              </div>
+            </div>
+
+            <hr className="border-discord-border" />
+
+            {/* Twitch */}
+            <div>
+              <h3 className="text-sm font-semibold text-discord-muted uppercase tracking-wider mb-3">Twitch</h3>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Client ID</label>
+                  <p className="text-xs text-discord-muted mb-1.5">
+                    From dev.twitch.tv/console/apps
+                  </p>
+                  <input
+                    type="text"
+                    value={draft.twitchClientId ?? ""}
+                    onChange={(e) => setField("twitchClientId", e.target.value)}
+                    placeholder="Not set"
+                    className="w-full px-3 py-2 bg-discord-input border border-discord-border rounded-lg text-discord-text focus:ring-2 focus:ring-discord-accent font-mono text-sm"
+                  />
+                </div>
+                <SecretField
+                  label="Client Secret"
+                  value={draft.twitchClientSecret ?? ""}
+                  isSet={settings.twitchClientSecretSet}
+                  onChange={(v) => setField("twitchClientSecret", v)}
+                />
+              </div>
+              <div className="mt-4">
+                <SecretField
+                  label="EventSub Secret"
+                  value={draft.twitchEventsubSecret ?? ""}
+                  isSet={settings.twitchEventsubSecretSet}
+                  onChange={(v) => setField("twitchEventsubSecret", v)}
+                  description="Signing secret for webhook callbacks. Auto-generated in Docker if unset."
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Save bar */}
+          <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-discord-border">
+            {saved && (
+              <span className="text-sm text-green-400">Saved</span>
+            )}
+            <button
+              onClick={saveIntegration}
+              disabled={saving || !hasChanges}
+              className="btn-primary disabled:opacity-50"
+            >
+              {saving ? "Saving..." : "Save"}
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* Discord Connection */}
       <section className="p-6 bg-discord-card rounded-xl border border-discord-border">

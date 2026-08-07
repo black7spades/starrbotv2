@@ -254,10 +254,16 @@ export class ConfigStore {
 
   // Settings
   getSettings(): GlobalSettings {
-    const settings = readJson<Record<string, any>>(SETTINGS_FILE, {});
+    const s = readJson<Record<string, any>>(SETTINGS_FILE, {});
     return {
-      commandPrefix: settings.commandPrefix ?? "!",
-      theme: settings.theme ?? "dark",
+      commandPrefix: s.commandPrefix ?? "!",
+      theme: s.theme ?? "dark",
+      baseUrl: s.baseUrl ?? "",
+      discordClientId: s.discordClientId ?? "",
+      discordClientSecret: s.discordClientSecret ?? "",
+      twitchClientId: s.twitchClientId ?? "",
+      twitchClientSecret: s.twitchClientSecret ?? "",
+      twitchEventsubSecret: s.twitchEventsubSecret ?? "",
     };
   }
 
