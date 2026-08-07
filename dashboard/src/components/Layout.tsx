@@ -10,6 +10,7 @@ const NAV: { path: string; label: string; icon: IconName }[] = [
   { path: "/", label: "Dashboard", icon: "dashboard" },
   { path: "/playground", label: "Playground", icon: "playground" },
   { path: "/logs", label: "Logs", icon: "logs" },
+  { path: "/settings", label: "Settings", icon: "settings" },
 ];
 
 const STATUS_VAR: Record<string, string> = {

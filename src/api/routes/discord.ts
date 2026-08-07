@@ -1,14 +1,15 @@
 import type { FastifyPluginAsync } from "fastify";
 import { configStore } from "config/store";
+import { setting } from "config/index";
 import { createSession } from "auth/index";
 import { hashPassword } from "auth/argon2";
 
 const DISCORD_API = "https://discord.com/api/v10";
 const DISCORD_CDN = "https://cdn.discordapp.com";
 
-const clientId = () => process.env.DISCORD_CLIENT_ID || "";
-const clientSecret = () => process.env.DISCORD_CLIENT_SECRET || "";
-const baseUrl = () => process.env.BASE_URL || `http://localhost:${process.env.PORT || "2013"}`;
+const clientId = () => setting("discordClientId");
+const clientSecret = () => setting("discordClientSecret");
+const baseUrl = () => setting("baseUrl") || `http://localhost:${process.env.PORT || "2013"}`;
 const redirectUri = () => `${baseUrl()}/api/auth/discord/callback`;
 
 export const discordRoutes: FastifyPluginAsync = async (fastify) => {

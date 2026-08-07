@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import { systemLog } from "utils/systemLog";
+import { setting } from "config/index";
 
 /**
  * Twitch Helix client: app access token, user lookup, and EventSub
@@ -59,8 +60,8 @@ export class TwitchApi {
   constructor(private readonly creds: TwitchCredentials) {}
 
   static fromEnv(): TwitchApi | null {
-    const clientId = process.env.TWITCH_CLIENT_ID;
-    const clientSecret = process.env.TWITCH_CLIENT_SECRET;
+    const clientId = setting("twitchClientId");
+    const clientSecret = setting("twitchClientSecret");
     if (!clientId || !clientSecret) return null;
     return new TwitchApi({ clientId, clientSecret });
   }

@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { systemLog } from "utils/systemLog";
+import { setting } from "config/index";
 import { TwitchApi, SUBSCRIPTION_TYPES } from "./api";
 import { HEADER, TEST_STATUS, hmacMessage, signPayload, isValidSecret } from "./eventsub";
 import { callbackUrl } from "./index";
@@ -76,7 +77,7 @@ export async function runDiagnostics(broadcasterLogin?: string): Promise<Diagnos
   }
 
   // --- Signing secret ---
-  const secret = process.env.TWITCH_EVENTSUB_SECRET ?? "";
+  const secret = setting("twitchEventsubSecret");
   if (!secret) {
     checks.push(
       check(
@@ -235,7 +236,7 @@ export async function runSelfTest(opts: {
 }): Promise<SelfTestResult> {
   const diagnostics = await runDiagnostics(opts.broadcasterLogin);
   const callback = diagnostics.callbackUrl;
-  const secret = process.env.TWITCH_EVENTSUB_SECRET ?? "";
+  const secret = setting("twitchEventsubSecret");
 
   // Only block on what delivery genuinely needs: something to sign with, and an
   // address to send to.
