@@ -120,6 +120,15 @@ export class TwitchApi {
     };
   }
 
+  async getChannelInfo(broadcasterId: string): Promise<{ title: string; gameName: string } | null> {
+    const res = await this.helix(`/channels?broadcaster_id=${encodeURIComponent(broadcasterId)}`);
+    if (!res.ok) return null;
+    const body = (await res.json()) as { data: any[] };
+    const ch = body.data?.[0];
+    if (!ch) return null;
+    return { title: ch.title ?? "", gameName: ch.game_name ?? "" };
+  }
+
   async listSubscriptions(): Promise<EventSubSubscription[]> {
     const out: EventSubSubscription[] = [];
     let cursor: string | undefined;

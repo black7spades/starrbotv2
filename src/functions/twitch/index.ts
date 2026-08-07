@@ -150,7 +150,19 @@ const twitchManifest: FunctionManifest = {
           return;
         }
 
-        // stream.online
+        // stream.online — fetch current channel info if we don't have it cached
+        if ((!lastTitle || !lastGame) && api && broadcasterId) {
+          try {
+            const info = await api.getChannelInfo(broadcasterId);
+            if (info) {
+              if (!lastTitle && info.title) lastTitle = info.title;
+              if (!lastGame && info.gameName) lastGame = info.gameName;
+            }
+          } catch {
+            // Non-fatal: the announcement goes out without title/game.
+          }
+        }
+
         const template = (currentConfig.liveMessage as string) || "{name} is live!";
         const content = renderTemplate(template, {
           name,
